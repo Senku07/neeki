@@ -127,6 +127,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.core.content.getSystemService
 import coil.compose.AsyncImage
 import com.google.android.gms.common.api.Response
+import com.google.gson.internal.GsonBuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -469,7 +470,10 @@ fun Diary(latitude: Double,longitude: Double) {
             )
 
 
-            Row {
+            Row(modifier = Modifier
+                .horizontalScroll(
+                    rememberScrollState()
+                )) {
                 IconButton(onClick = { /*TODO*/ }) {
                     Icon(
                         painterResource(id = R.drawable.save),
@@ -478,7 +482,7 @@ fun Diary(latitude: Double,longitude: Double) {
                     )
                 }
                 IconButton(onClick = { showEmoji = !showEmoji }) {
-                    showChoosenEmoji(emojiId = emojiId, emojiList = emojiList,selectedFontColor)
+                    showChoosenEmoji(emojiId = emojiId, emojiList = emojiList, selectedFontColor)
                 }
                 if (!checkInternet) {
                     IconButton(onClick = { showOfflineLoc = true }) {
@@ -488,11 +492,10 @@ fun Diary(latitude: Double,longitude: Double) {
                             tint = selectedFontColor
                         )
                     }
-                }
-                else if(weatherData != null){
+                } else if (weatherData != null) {
                     IconButton(onClick = { weatherDiloag = true }) {
                         val weatherId = weatherData?.weather?.get(0)?.icon
-                        val weatherIcon =  weatherIconMappings[weatherId]
+                        val weatherIcon = weatherIconMappings[weatherId]
 
                         if (weatherIcon != null) {
                             Icon(
@@ -503,13 +506,12 @@ fun Diary(latitude: Double,longitude: Double) {
                         }
                     }
 
-                }
-                else {
-                   weatherData =  weatherPermission(
+                } else {
+                    weatherData = weatherPermission(
                         context = context,
-                        showSnack = { permissionGranted = false},
+                        showSnack = { permissionGranted = false },
                         weatherMap = weatherIconMappings,
-                       color = selectedFontColor
+                        color = selectedFontColor
                     )
                 }
 
@@ -523,15 +525,16 @@ fun Diary(latitude: Double,longitude: Double) {
 //                }
 
                 if (checkInternet) {
-                    requestPermission(context = context, latlang = { location ->
-                        latitudeDiary = location.latitude;longitudeDiary = location.longitude;
-                       OpenGoogleMaps(
-                            latitude = latitudeDiary,
-                            longitude = longitudeDiary,
-                            context = context
-                        );
-                        checkcInternetStatus(context)
-                    },
+                    requestPermission(
+                        context = context, latlang = { location ->
+                            latitudeDiary = location.latitude;longitudeDiary = location.longitude;
+                            OpenGoogleMaps(
+                                latitude = latitudeDiary,
+                                longitude = longitudeDiary,
+                                context = context
+                            );
+                            checkcInternetStatus(context)
+                        },
                         showSnack = {
                             permissionGranted = false
                             Log.i(
@@ -551,19 +554,28 @@ fun Diary(latitude: Double,longitude: Double) {
                     }
                 }
 
+                IconButton(onClick = { fontcolorBoolean = true }) {
+                    Icon(
+                        painterResource(id = R.drawable.color_lens),
+                        contentDescription = null,
+                        tint = selectedFontColor
+                    )
+                }
 
-                attachFileIntent(assignUri = {a -> imageUriList = a})
+                    attachMediaIntent(assignUri = { a -> imageUriList = a },selectedFontColor)
 
-                IconButton(onClick = { showImage = true}) {
+
+                IconButton(onClick = { showImage = true }) {
                     Icon(Icons.Outlined.List, contentDescription = null, tint = selectedFontColor)
                 }
 
-
-
-                IconButton(onClick = { fontcolorBoolean = true }) {
-                            Icon(painterResource(id = R.drawable.color_lens), contentDescription = null, tint = selectedFontColor)
-                    }
+                IconButton(onClick = { showImage = true }) {
+                    Icon(painterResource(id = R.drawable.attach), contentDescription = null, tint = selectedFontColor)
                 }
+
+            }
+
+               
 
 
         }
@@ -864,17 +876,19 @@ interface apiService{
     ): Root
 }
 
+
 suspend fun Weather(latitude: Double,longitude: Double): Root?{
-    val apiKey = "aa714d546d683feeca372d55167f36ed"
-//    val apiKey = "dummy"
     val retrofit = Retrofit.Builder().
     baseUrl("https://api.openweathermap.org")
         .addConverterFactory(GsonConverterFactory.create())
         .build()
     val api = retrofit.create(apiService::class.java)
 
+    val apiKey = "adf"
+
+
     try {
-        return api.getWeather(latitude,longitude,apiKey)
+        return api.getWeather(latitude,longitude, apiKey)
     }
     catch (e:Exception){
         Log.e("API Error","Calling todo create a problem $e")
@@ -1192,7 +1206,7 @@ fun fontcolorModal(isOkay: Boolean,dismissFun: () -> Unit,onFontClick: (Int) -> 
 
 
 @Composable
-fun attachFileIntent(assignUri:(List<Uri>) -> Unit){
+fun attachMediaIntent(assignUri:(List<Uri>) -> Unit,color: Color){
 
     Log.e("PhotoPicker", "Reached Here Before Crash")
     val pickMedia = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(), onResult = {
@@ -1206,7 +1220,7 @@ fun attachFileIntent(assignUri:(List<Uri>) -> Unit){
     IconButton(onClick = {
         pickMedia.launch(PickVisualMediaRequest(mediaType = ActivityResultContracts.PickVisualMedia.ImageAndVideo))
     }) {
-        Icon(painterResource(id = R.drawable.add_image),contentDescription = null, tint = Color.White)
+        Icon(painterResource(id = R.drawable.add_image),contentDescription = null, tint = color)
     }
 }
 
@@ -1214,7 +1228,7 @@ fun attachFileIntent(assignUri:(List<Uri>) -> Unit){
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun showImageModal(isOkay: Boolean,dismissFun: () -> Unit,accentColor: Color,imageUriList: List<Uri>){
+fun showImageModal(isOkay: Boolean,dismissFun: () -> Unit,accentColor: Color,imageUriList: List<Uri>?){
     if (isOkay) {
         Dialog(onDismissRequest = {dismissFun()}, properties = DialogProperties(dismissOnBackPress = true,dismissOnClickOutside = true),content = {
             Card(shape = RoundedCornerShape(10.dp), modifier = Modifier
@@ -1226,10 +1240,15 @@ fun showImageModal(isOkay: Boolean,dismissFun: () -> Unit,accentColor: Color,ima
             ) {
                 Column(modifier = Modifier
                     .verticalScroll(rememberScrollState())) {
-                    for(i in imageUriList){
-                        AsyncImage(model = i , contentDescription = null, modifier = Modifier
-                            .padding(8.dp)
-                            , contentScale = ContentScale.Fit )
+                    if(imageUriList != null){
+                    for (i in imageUriList) {
+                        AsyncImage(
+                            model = i, contentDescription = null, modifier = Modifier
+                                .padding(8.dp), contentScale = ContentScale.Fit
+                        )
+                    }
+                    }else{
+                        Text("O File Attached")
                     }
                 }
                 }
