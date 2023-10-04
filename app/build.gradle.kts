@@ -1,9 +1,22 @@
+import java.io.InputStreamReader
 import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+val localPropertiesFile = project.rootProject.file("local.properties")
+val properties = Properties()
+
+
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { inputStream ->
+        properties.load(inputStream)
+    }
+}
+
+val apiKey: String = properties.getProperty("WEATHER_API_KEY")
 
 android {
     namespace = "com.example.nekki"
@@ -34,11 +47,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String","WEATHER_KEY","\"${findProperty("WEATHER_API_KEY")}\"")
+            buildConfigField("String","WEATHER_KEY","$apiKey")
         }
         debug{
-
-            buildConfigField("String","WEATHER_KEY","\"${findProperty("WEATHER_API_KEY")}\"")
+            buildConfigField("String","WEATHER_KEY","$apiKey")
         }
 
     }
@@ -87,4 +99,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("androidx.activity:activity-ktx:1.7.2")
     implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation ("androidx.media3:media3-exoplayer:1.1.1")
+    implementation ("androidx.media3:media3-exoplayer-dash:1.1.1")
+    implementation ("androidx.media3:media3-ui:1.1.1")
 }

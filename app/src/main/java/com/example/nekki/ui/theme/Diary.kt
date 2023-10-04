@@ -2,28 +2,32 @@ package com.example.nekki.ui.theme
 
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.fillMaxSize
-
-import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.graphics.Color.rgb
+import android.database.Cursor
 import android.location.Location
 import android.location.LocationRequest
+import android.net.ConnectivityManager
 import android.net.Uri
+import android.provider.OpenableColumns
+import android.provider.Settings
 import android.util.Log
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.view.Surface
+import android.view.SurfaceView
+import android.view.TextureView
+import android.widget.Space
+import android.widget.Toast
+import android.widget.VideoView
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -33,10 +37,15 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,100 +54,96 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import java.util.Date
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.outlined.List
-import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardDefaults.cardColors
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.currentCompositionLocalContext
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.modifier.modifierLocalMapOf
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SimpleExoPlayer
+import androidx.media3.ui.PlayerView
+import coil.compose.AsyncImage
+import com.example.nekki.BuildConfig
 import com.example.nekki.Comfortaa
+import com.example.nekki.CurrentState
 import com.example.nekki.R
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import android.net.ConnectivityManager
-import android.os.Build
-import android.provider.Settings
-import android.widget.Toast
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Clear
-import androidx.compose.material.icons.rounded.DateRange
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.modifier.modifierLocalConsumer
-import androidx.compose.ui.text.style.TextAlign
-import androidx.core.content.getSystemService
-import coil.compose.AsyncImage
-import com.google.android.gms.common.api.Response
-import com.google.gson.internal.GsonBuildConfig
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
-import retrofit2.Call
+import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
-import kotlin.coroutines.coroutineContext
 
 
 val SkyBlue = Color(33, 150, 243)
@@ -204,9 +209,11 @@ val fontColorList = listOf(
 
 
 @SuppressLint("CoroutineCreationDuringComposition", "SuspiciousIndentation")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class,
+    ExperimentalComposeUiApi::class
+)
 @Composable
-fun Diary(latitude: Double,longitude: Double) {
+fun Diary(latitude: Double,longitude: Double,sharedPreferences: SharedPreferences) {
     val date = Date()
     var showEmoji by remember {
         mutableStateOf(true)
@@ -233,7 +240,7 @@ fun Diary(latitude: Double,longitude: Double) {
     }
 
     var imageUriList by remember {
-        mutableStateOf<List<Uri>?>(null)
+        mutableStateOf<List<Uri>>(emptyList())
     }
 
     val context = LocalContext.current
@@ -276,11 +283,24 @@ fun Diary(latitude: Double,longitude: Double) {
         "13d" to painterResource(id = R.drawable.snow),
         "13n" to painterResource(id = R.drawable.snow),
         "50d" to painterResource(id = R.drawable.mist),
-        "50n" to painterResource(id = R.drawable.mist)
+        "50n" to painterResource(id = R.drawable.mist),
+        "0" to painterResource(id = R.drawable.cloud_off)
     )
 
-    var attachmentClicked by remember {
-        mutableStateOf(false)
+    val fontColor = sharedPreferences.getInt("Fontcolor",0)
+    val accentColor = sharedPreferences.getInt("Accentcolor",1)
+    val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.bts.toString())
+
+
+    val selectedFontColor =  fontColorList.get(fontColor)
+    val selectedAccentColor =  fontColorList.get(accentColor)
+
+//    var selectedFontColor by remember {
+//        mutableStateOf<Color>(fontColorList.i(getFontColor))
+//    }
+
+    var updateBackGroundImage by remember {
+        mutableStateOf<Uri>(Uri.parse(backGroundImage))
     }
 
     var fontcolorBoolean by remember {
@@ -292,31 +312,10 @@ fun Diary(latitude: Double,longitude: Double) {
         mutableStateOf(0)
     }
 
-    var selectedFontColor by remember {
-        mutableStateOf<Color>(fontColorList.get(0))
-    }
 
     var accentColorId by remember {
         mutableStateOf(1)
     }
-
-    var selectedAccentColor by remember {
-        mutableStateOf<Color>(fontColorList.get(0))
-    }
-
-    for((index,color) in fontColorList.withIndex()){
-        if(index == accentColorId){
-            selectedAccentColor = color
-        }
-    }
-
-    for((index,color) in fontColorList.withIndex()){
-        if(index == fontColorId){
-            selectedFontColor = color
-        }
-    }
-
-
 
     AnimatedVisibility(
         visible = showEmoji,
@@ -334,13 +333,22 @@ fun Diary(latitude: Double,longitude: Double) {
     }
 
 
-
         fontcolorModal(
         isOkay = fontcolorBoolean ,
-        onFontClick = { clickedIndex -> fontColorId = clickedIndex},
+        onFontClick = { clickedIndex ->
+            val editor = sharedPreferences.edit()
+            editor.putInt("Fontcolor",clickedIndex)
+            editor.apply()
+            fontColorId = clickedIndex
+        },
         dismissFun = { fontcolorBoolean = false },
             color = selectedFontColor,
-            onAccentClick = {clickedInex -> accentColorId = clickedInex },
+            onAccentClick = {clickedInex ->
+                accentColorId = clickedInex
+                val editor = sharedPreferences.edit()
+                editor.putInt("Accentcolor",clickedInex)
+                editor.apply()
+                            },
             accentColor = selectedAccentColor
 
         )
@@ -379,6 +387,15 @@ fun Diary(latitude: Double,longitude: Double) {
         mutableStateOf(false)
     }
 
+    var showContactAndUrl by remember {
+        mutableStateOf(false)
+    }
+
+    var showContactAndUrl2 by remember {
+        mutableStateOf(false)
+    }
+
+
     if (checkInternet && (latitudeDiary != 0.0) && (longitudeDiary != 0.0)) {
         rememberCoroutineScope().launch {
             weatherData = Weather(latitudeDiary, longitudeDiary)
@@ -389,18 +406,64 @@ fun Diary(latitude: Double,longitude: Double) {
         weatherData?.let { ShowWeather(weatherDiloag, dismissFun = { weatherDiloag = false }, it,color = selectedFontColor, accentColor = selectedAccentColor) }
     }
 
+    var contactsAndUrlList: List<Pair<String,String>> by remember {
+        mutableStateOf(emptyList())
+    }
+
+    if(showContactAndUrl){
+        showContactModal("Name","Contact Number",true,showContactAndUrl, dismissFun = {showContactAndUrl = false},onSubmit = {s,i -> contactsAndUrlList += Pair(
+            s,
+            i
+        );showContactAndUrl = false},selectedFontColor,selectedAccentColor )
+    }
+
+    if(showContactAndUrl2){
+        showContactModal("Name","Url",false,showContactAndUrl2, dismissFun = {showContactAndUrl2 = false},onSubmit = {s,i -> contactsAndUrlList += Pair(
+            s,
+            i
+        );showContactAndUrl2 = false},selectedFontColor,selectedAccentColor )
+    }
+
     if(showImage){
-        imageUriList?.let { showImageModal(isOkay = showImage, dismissFun = { showImage = false }, accentColor = selectedAccentColor , imageUriList = it) }
+        attachMediaIntent(isOkay = showImage,
+            showContactModal = {showContactAndUrl = true},
+            showUrlModalFun = {showContactAndUrl2 = true},
+            removeUrlandContact = {i -> contactsAndUrlList = contactsAndUrlList.minus(i)},
+            removeUri = {a -> imageUriList = imageUriList.minus(a)},
+            setSingleUri = {a->
+           imageUriList =  imageUriList + a }, setList = { a ->
+                imageUriList = imageUriList + a }, dismissFun = {showImage = false},
+            accentColor = selectedAccentColor,color = selectedFontColor,
+            imageUriList = imageUriList, contactandUrlList = contactsAndUrlList)
+    }
+
+    if(showImage){
+        BackHandler(true) {
+            showImage = false
+        }
     }
 
 
-    Box(modifier = Modifier.padding(10.dp)) {
-        Image(
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var isContentFieldActive by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    if(isContentFieldActive){
+        BackHandler {
+            focusManager.clearFocus()
+        }
+    }
+
+    Box(modifier = Modifier
+        .padding(10.dp)
+        .fillMaxSize()) {
+        AsyncImage(
+            updateBackGroundImage,
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(15.dp)),
-            painter = painterResource(id = R.drawable.night),
             contentDescription = null,
             contentScale = ContentScale.Crop
         )
@@ -411,65 +474,77 @@ fun Diary(latitude: Double,longitude: Double) {
                 .padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
+            if(!isContentFieldActive) {
             Text(text = formated, fontFamily = Comfortaa, fontSize = 24.sp, color = selectedFontColor)
-            OutlinedTextField(
-                value = titleText,
-                singleLine = true,
-                onValueChange = { titleText = it },
-                textStyle = TextStyle(
-                    fontFamily = Comfortaa,
-                    fontSize = 20.sp,
-                    color = selectedFontColor
-                ),
-                label = {
-                    Text(
-                        "Title",
-                        color = selectedFontColor,
+                OutlinedTextField(
+                    value = titleText,
+                    singleLine = true,
+                    onValueChange = { titleText = it },
+//                colors =
+                    textStyle = TextStyle(
                         fontFamily = Comfortaa,
-                        fontSize = 18.sp
+                        fontSize = 20.sp,
+                        color = selectedFontColor
+                    ),
+//                place
+                    placeholder = {
+                        Text(
+                            "Title...",
+                            color = selectedFontColor,
+                            fontSize = 16.sp,
+                            fontFamily = Comfortaa
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onDone = { focusKeyboard?.clearFocus() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 5.dp, vertical = 5.dp),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = selectedAccentColor,
+                        unfocusedBorderColor = selectedFontColor,
+                        cursorColor = selectedFontColor
                     )
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onDone = { focusKeyboard?.clearFocus() }),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 5.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = selectedAccentColor,
-                    unfocusedBorderColor = selectedFontColor
                 )
-            )
+            }
 
-            OutlinedTextField(
+            BasicTextField(
                 value = contentText,
-                onValueChange = { contentText = it },
-                textStyle = TextStyle(
-                    fontFamily = Comfortaa,
-                    fontSize = 20.sp,
-                    color = selectedFontColor
-                ),
-                label = {
-                    Text(
-                        "About Day...",
-                        color = selectedFontColor,
-                        fontFamily = Comfortaa,
-                        fontSize = 18.sp
-                    )
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-                keyboardActions = KeyboardActions(onDone = { focusKeyboard?.clearFocus() }),
+                onValueChange =  {a: String -> contentText = a},
+                cursorBrush = SolidColor(selectedFontColor),
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(0.9f)
-//                    .verticalScroll(state = rememberScrollState(),enabled = true)
-                    .padding(horizontal = 20.dp, vertical = 5.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = selectedAccentColor,
-                    unfocusedBorderColor = selectedFontColor
-                )
+//                        .verticalScroll(state = rememberScrollState(), enabled = true)
+                    .padding(top = 5.dp,
+                        bottom = if(isContentFieldActive){10.dp}else{5.dp},
+                        start = 5.dp, end = 5.dp)
+//                        .background(Color.Transparent)
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { focusState ->
+                        isContentFieldActive = focusState.isFocused
+
+                        if(contentText.isEmpty()){
+
+                        }
+                    },
+
+                textStyle = TextStyle(
+                    fontSize = 18.sp,
+                    color = selectedFontColor,
+//                        fontFamily = Comfortaa
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+//                cursorBrush = selectedFontColor,
+//                decorationBox: @Composable (@Composable () -> Unit) -> Unit
             )
 
 
+
+
+
+            if(!isContentFieldActive)
+            {
             Row(modifier = Modifier
                 .horizontalScroll(
                     rememberScrollState()
@@ -515,24 +590,10 @@ fun Diary(latitude: Double,longitude: Double) {
                     )
                 }
 
-
-//                IconButton(onClick = {attachmentClicked = true}) {
-//                    Icon(
-//                        painterResource(id = R.drawable.attach),
-//                        contentDescription = null,
-//                        tint = selectedFontColor
-//                    )
-//                }
-
-                if (checkInternet) {
+               if (checkInternet) {
                     requestPermission(
                         context = context, latlang = { location ->
                             latitudeDiary = location.latitude;longitudeDiary = location.longitude;
-                            OpenGoogleMaps(
-                                latitude = latitudeDiary,
-                                longitude = longitudeDiary,
-                                context = context
-                            );
                             checkcInternetStatus(context)
                         },
                         showSnack = {
@@ -562,22 +623,42 @@ fun Diary(latitude: Double,longitude: Double) {
                     )
                 }
 
-                    attachMediaIntent(assignUri = { a -> imageUriList = a },selectedFontColor)
-
-
                 IconButton(onClick = { showImage = true }) {
-                    Icon(Icons.Outlined.List, contentDescription = null, tint = selectedFontColor)
+                    Icon(painterResource(id = R.drawable.attach_file_2), contentDescription = null, tint = selectedFontColor)
                 }
 
-                IconButton(onClick = { showImage = true }) {
-                    Icon(painterResource(id = R.drawable.attach), contentDescription = null, tint = selectedFontColor)
-                }
+
+
+                addBackGround(changeBackGround = {uri ->
+                    val editor = sharedPreferences.edit();
+                    editor.putString("BackgroundImage",uri.toString())
+                    Log.e("Uri","New Back Ground image $uri")
+                    editor.apply()
+
+                    updateBackGroundImage = uri
+                },selectedFontColor)
 
             }
+            }
+        }
 
-               
+        if(isContentFieldActive){
 
-
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.End, modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)) {
+                    FloatingActionButton(
+                        onClick = { focusManager.clearFocus();isContentFieldActive = false },
+                        containerColor = selectedAccentColor
+                    ) {
+                        Icon(
+                            Icons.Rounded.ArrowBack,
+                            contentDescription = null,
+                            tint = selectedFontColor,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
         }
 
         if (!checkInternet) {
@@ -604,6 +685,7 @@ fun Diary(latitude: Double,longitude: Double) {
 }
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun emojiModal(isOkay: Boolean,onEmojiClick: (Int) -> Unit ,function: () -> Unit,emojiList: List<Painter>,fontColor: Color, accentColor: Color){
 
@@ -616,14 +698,13 @@ fun emojiModal(isOkay: Boolean,onEmojiClick: (Int) -> Unit ,function: () -> Unit
                 .graphicsLayer { transformOrigin = TransformOrigin.Center },
                 colors = cardColors(accentColor)
                 ) {
-                Column(modifier = Modifier
+                FlowRow(modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
                     .padding(5.dp)
-                    .verticalScroll(state = rememberScrollState(), enabled = true), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                    ) {
                     for ((index,i) in emojiList.withIndex()) {
                         IconButton(onClick = { onEmojiClick(index) },modifier = Modifier
-                            .fillMaxWidth(1f)
                             .padding(vertical = 4.dp)
                         ) {
                             Icon(i, contentDescription = null, tint = fontColor,modifier = Modifier.size(48.dp) )
@@ -642,61 +723,119 @@ fun showChoosenEmoji(emojiId: Int,emojiList: List<Painter>,color: Color){
             Icon(i, contentDescription = null,tint = color)
         }
     }
-
 }
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
-fun requestPermission(context: Context, latlang: (Location) -> Unit,showSnack:() -> Unit,color: Color) {
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted: Boolean ->
-            if (isGranted) {
-                Log.i("Permission", "Granted")
-            } else {
-                Log.i("Permission", "Denied")
-                showSnack()
-            }
-        }
-    )
+fun requestPermission(context: Context,latlang: (Location) -> Unit,showSnack:() -> Unit,color: Color) {
 
-   IconButton(onClick = {
-        when {
-            ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                var fusedLocation: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
-                fusedLocation.getCurrentLocation(LocationRequest.QUALITY_HIGH_ACCURACY,null).addOnSuccessListener { location: Location ->
+    val permission = ContextCompat.checkSelfPermission(context,android.Manifest.permission.ACCESS_FINE_LOCATION)
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            var fusedLocation: FusedLocationProviderClient =
+                LocationServices.getFusedLocationProviderClient(context)
+            fusedLocation.getCurrentLocation(LocationRequest.QUALITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { location: Location? ->
                     run {
-                        latlang(
-                            location
-                        )
+                        if (location != null) {
+                            // Handle the location data
+                            latlang(location)
+                            OpenGoogleMaps(location.latitude, location.longitude, context)
+
+                        } else {
+                            // Location is null, handle this case
+                            Log.e("Loation Null", "This error show that Location Recived Null")
+                        }
                     }
                 }
-            }
-            ActivityCompat.shouldShowRequestPermissionRationale(
-                context as Activity,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) -> {
 
-                requestPermissionLauncher.launch(
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
-                )
+        }
+    }
 
-            }
-            else -> {
-                requestPermissionLauncher.launch(
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
+
+    Log.e("Self Permission","checking for self permsioon $permission")
+
+    if(permission == PackageManager.PERMISSION_GRANTED) {
+        IconButton( onClick = {
+            var fusedLocation: FusedLocationProviderClient =
+                LocationServices.getFusedLocationProviderClient(context)
+            fusedLocation.getCurrentLocation(LocationRequest.QUALITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { location: Location? ->
+                    run {
+                        if (location != null) {
+                            // Handle the location data
+                            latlang(location)
+                            OpenGoogleMaps(location.latitude,location.longitude,context)
+
+                        } else {
+                            // Location is null, handle this case
+                            Log.e("Loation Null", "This error show that Location Recived Null")
+                        }
+                    }
+                }
+            }){
+            Icon(
+                painterResource(id = R.drawable.location_on),
+                contentDescription = null,
+                tint = color
                 )
-                showSnack()
-                Log.e("Clicked","Didn't reached here")
             }
         }
-    }) {
-        Icon(painterResource(id = R.drawable.location_on), contentDescription = null, tint = color)
+        else {
+            IconButton(
+                onClick = {
+            when {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    var fusedLocation: FusedLocationProviderClient =
+                        LocationServices.getFusedLocationProviderClient(context)
+                    fusedLocation.getCurrentLocation(LocationRequest.QUALITY_HIGH_ACCURACY, null)
+                        .addOnSuccessListener { location: Location? ->
+                            run {
+                                if (location != null) {
+                                    latlang(location)
+                                    OpenGoogleMaps(location.latitude,location.longitude,context)
+                                } else {
+                                    // Location is null, handle this case
+                                    Log.e(
+                                        "Location Null",
+                                        "This error show that Location Recived Null"
+                                    )
+                                }
+                            }
+                        }
+                }
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    context as Activity,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) -> {
+                    requestPermissionLauncher.launch(
+                        android.Manifest.permission.ACCESS_FINE_LOCATION
+                    )
+                }
+                else -> {
+                         requestPermissionLauncher.launch(
+                        android.Manifest.permission.ACCESS_FINE_LOCATION
+                    )
+                    showSnack()
+                    Log.e("Clicked", "Didn't reached here")
+                }
+            }
+         }){
+                Icon(
+                    painterResource(id = R.drawable.location_off),
+                    contentDescription = null,
+                    tint = color,
+                )
+        }
+
+        }
     }
-}
 
 
 //@SuppressLint("QueryPermissionsNeeded")
@@ -743,18 +882,8 @@ fun offlineSnackBar(context: Context) {
                             snackbarVisibleState = false
                         }
                     },
-                    action = {
-                        TextButton(onClick = {
-                            val intent = Intent().apply {
-                                action = android.provider.Settings.ACTION_WIRELESS_SETTINGS
-                            }
-                            context.startActivity(intent)
-                        }) {
-                            Text(text = "Settings")
-                        }
-                    },
                     modifier = Modifier.padding(8.dp)
-                ) { Text(text = "No Internet Connection! You'll miss Weather and Location") }
+                ) {Text(text = "No Internet Connection! Weather and Location data cannot be fetched or stored.") }
             }
         }
     }
@@ -796,7 +925,7 @@ fun grantPermissionSnackBar(context: Context) {
                         }
                     },
                     modifier = Modifier.padding(8.dp)
-                ) { Text(text = "Grant Location Permission") }
+                ) { Text(text = "Location permission is required to access and store your current Location and Weather Data.") }
             }
         }
     }
@@ -854,7 +983,7 @@ data class Rain(
 )
 
 data class Clouds(
-    val all: Long
+    val all: Double
 )
 
 data class Sys(
@@ -863,6 +992,41 @@ data class Sys(
     val country: String,
     val sunrise: Long,
     val sunset: Long
+)
+
+
+val rootWithNulls = Root(
+    coord = Coord(lon = 0.0, lat = 0.0),
+    weather = listOf(
+        Weather(id = 0, main = "Something Went Wrong", description = "", icon = "0")
+    ),
+    base = "",
+    main = Main(
+        temp = 0.0,
+        feels_like = 0.0,
+        temp_min = 0.0,
+        temp_max = 0.0,
+        pressure = 0L,
+        humidity = 0L,
+        sea_level = 0L,
+        grnd_level = 0L
+    ),
+    visibility = 0L,
+    wind = Wind(speed = 0.0, deg = 0L, gust = 0.0),
+    rain = Rain(`1h` = 0.0),
+    clouds = Clouds(all = 0.0),
+    dt = 0L,
+    sys = Sys(
+        type = 0L,
+        id = 0L,
+        country = "",
+        sunrise = 0L,
+        sunset = 0L
+    ),
+    timezone = 0L,
+    id = 0L,
+    name = "",
+    cod = 0L
 )
 
 
@@ -877,22 +1041,20 @@ interface apiService{
 }
 
 
-suspend fun Weather(latitude: Double,longitude: Double): Root?{
+suspend fun Weather(latitude: Double,longitude: Double): Root{
     val retrofit = Retrofit.Builder().
     baseUrl("https://api.openweathermap.org")
         .addConverterFactory(GsonConverterFactory.create())
         .build()
     val api = retrofit.create(apiService::class.java)
-
-    val apiKey = "adf"
-
+    val apiKey = BuildConfig.WEATHER_KEY
 
     try {
         return api.getWeather(latitude,longitude, apiKey)
     }
     catch (e:Exception){
         Log.e("API Error","Calling todo create a problem $e")
-       return null
+       return rootWithNulls
     }
 }
 
@@ -1206,52 +1368,701 @@ fun fontcolorModal(isOkay: Boolean,dismissFun: () -> Unit,onFontClick: (Int) -> 
 
 
 @Composable
-fun attachMediaIntent(assignUri:(List<Uri>) -> Unit,color: Color){
+fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String>) -> Unit,showContactModal:() -> Unit,showUrlModalFun: () -> Unit,removeUri:(Uri) -> Unit,setSingleUri:(Uri) -> Unit,dismissFun: () -> Unit,accentColor: Color,color: Color,setList:(List<Uri>)->Unit ,imageUriList: List<Uri>,contactandUrlList: List<Pair<String,String>>){
 
-    Log.e("PhotoPicker", "Reached Here Before Crash")
-    val pickMedia = rememberLauncherForActivityResult(contract = ActivityResultContracts.PickMultipleVisualMedia(), onResult = {
-        uris ->
-            if(uris.isNotEmpty()){
+    val context = LocalContext.current
+    val pickMedia = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(), onResult = { uris ->
+            if (uris.isNotEmpty()) {
                 Log.e("PhotoPicker", "Number of items selected: ${uris.get(0)}")
-                assignUri(uris)
+                setList(uris)
             }
-    })
+        })
 
-    IconButton(onClick = {
-        pickMedia.launch(PickVisualMediaRequest(mediaType = ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-    }) {
-        Icon(painterResource(id = R.drawable.add_image),contentDescription = null, tint = color)
+    if(isOkay){
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(accentColor)) {
+
+                        Column(
+                            verticalArrangement = Arrangement.Top,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .verticalScroll(rememberScrollState())
+                                .padding(vertical = 50.dp)
+                        ) {
+
+                            if (imageUriList.isNotEmpty()) {
+                                for (e in imageUriList) {
+                                    val form = getFileName(e, context)
+                                    Log.e("Music is ", "I'm here before check ${form}")
+                                    if (form != null) {
+                                        if (form.endsWith(
+                                                "png",
+                                                ignoreCase = true
+                                            ) || form.endsWith(
+                                                "jpeg",
+                                                ignoreCase = true
+                                            ) || form.endsWith("jpg", ignoreCase = true)
+                                        ) {
+                                            Log.e(
+                                                "Image",
+                                                "I'm here before check with image format form "
+                                            )
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .fillMaxHeight()
+                                                    .padding(
+                                                        top = 5.dp,
+                                                        bottom = 0.dp,
+                                                        start = 5.dp,
+                                                        end = 5.dp
+                                                    )
+                                                    .background(
+                                                        color,
+                                                        RoundedCornerShape(
+                                                            topEnd = 8.dp,
+                                                            topStart = 8.dp
+                                                        )
+                                                    )
+                                            ) {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+
+                                                    Text(
+                                                        "$form",
+                                                        modifier = Modifier
+                                                            .padding(15.dp)
+                                                            .fillMaxWidth(0.9f),
+                                                        color = accentColor,
+                                                        fontSize = 18.sp,
+                                                        softWrap = true,
+                                                        fontFamily = Comfortaa
+                                                    )
+
+                                                    IconButton(onClick = { removeUri(e) }) {
+                                                        Icon(
+                                                            Icons.Rounded.Clear,
+                                                            contentDescription = null,
+                                                            tint = accentColor
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            AsyncImage(
+                                                model = e,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Fit,
+                                                modifier = Modifier
+                                                    .padding(
+                                                        top = 0.dp,
+                                                        start = 5.dp,
+                                                        end = 5.dp,
+                                                        bottom = 5.dp
+                                                    )
+                                                    .fillMaxHeight()
+                                                    .height(450.dp)
+                                                    .fillMaxWidth()
+                                                    .background(
+                                                        color,
+                                                        RoundedCornerShape(
+                                                            bottomStart = 8.dp,
+                                                            bottomEnd = 8.dp
+                                                        )
+                                                    )
+                                            )
+                                        } else if (form.endsWith(
+                                                "mp4",
+                                                ignoreCase = true
+                                            ) || form.endsWith(
+                                                "gif",
+                                                ignoreCase = true
+                                            ) || form.endsWith("mkv", ignoreCase = true)
+                                            || form.endsWith("wav", ignoreCase = true)
+                                            || form.endsWith("m4a", ignoreCase = true)
+                                            || form.endsWith("mp3", ignoreCase = true)
+                                            || form.endsWith("opus", ignoreCase = true)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .fillMaxHeight()
+                                                    .padding(
+                                                        top = 5.dp,
+                                                        bottom = 0.dp,
+                                                        start = 5.dp,
+                                                        end = 5.dp
+                                                    )
+                                                    .background(
+                                                        color,
+                                                        RoundedCornerShape(
+                                                            topEnd = 8.dp,
+                                                            topStart = 8.dp
+                                                        )
+                                                    )
+                                            ) {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+
+                                                    Text(
+                                                        "$form",
+                                                        modifier = Modifier
+                                                            .padding(15.dp)
+                                                            .fillMaxWidth(0.9f),
+                                                        color = accentColor,
+                                                        fontSize = 18.sp,
+                                                        softWrap = true,
+                                                        fontFamily = Comfortaa
+                                                    )
+
+                                                    IconButton(onClick = { removeUri(e) }) {
+                                                        Icon(
+                                                            Icons.Rounded.Clear,
+                                                            contentDescription = null,
+                                                            tint = accentColor
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            Log.e("Mp3", "Mp3 attached")
+                                            playMedia(context, e, color)
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .fillMaxHeight()
+                                                    .padding(
+                                                        5.dp
+                                                    )
+                                                    .background(
+                                                        color,
+                                                        RoundedCornerShape(
+                                                            8.dp
+                                                        )
+                                                    )
+                                            ) {
+                                                Row(
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text(
+                                                        "$form",
+                                                        modifier = Modifier
+                                                            .padding(15.dp)
+                                                            .fillMaxWidth(0.9f),
+                                                        color = accentColor,
+                                                        fontSize = 24.sp,
+                                                        softWrap = true,
+                                                        fontFamily = Comfortaa
+                                                    )
+
+                                                    IconButton(onClick = { removeUri(e) }) {
+                                                        Icon(
+                                                            Icons.Rounded.Clear,
+                                                            contentDescription = null,
+                                                            tint = accentColor
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                    }
+                                }
+                            }
+
+                            if(contactandUrlList.isNotEmpty()){
+
+                                for(c in contactandUrlList) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .fillMaxHeight()
+                                            .padding(
+                                                5.dp
+                                            )
+                                            .background(
+                                                color,
+                                                RoundedCornerShape(
+                                                    8.dp
+                                                )
+                                            )
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    c.first,
+                                                    modifier = Modifier
+                                                        .padding(15.dp)
+                                                        .fillMaxWidth(0.9f),
+                                                    color = accentColor,
+                                                    fontSize = 24.sp,
+                                                    softWrap = true,
+                                                    fontFamily = Comfortaa
+                                                )
+                                                Text(
+                                                    c.second.toString(),
+                                                    modifier = Modifier
+                                                        .padding(15.dp)
+                                                        .fillMaxWidth(0.9f),
+                                                    color = accentColor,
+                                                    fontSize = 24.sp,
+                                                    softWrap = true,
+                                                    fontFamily = Comfortaa
+                                                )
+                                            }
+
+                                            IconButton(onClick = { removeUrlandContact(c) }) {
+                                                Icon(
+                                                    Icons.Rounded.Clear,
+                                                    contentDescription = null,
+                                                    tint = accentColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+
+                        }
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier
+                    .fillMaxWidth()
+//                    .padding(5.dp)
+                    .background(accentColor)
+            ) {
+                IconButton(onClick = {
+                    showContactModal()
+                })
+                 {
+                    Icon(
+                        painterResource(id = R.drawable.attach_contacts),
+                        contentDescription = null,
+                        Modifier.size(26.dp),
+                        tint = color
+                    )
+                }
+
+                audioPicker(addMedia = { a -> setSingleUri(a)},color)
+
+                IconButton(onClick = {
+                    pickMedia.launch(PickVisualMediaRequest(mediaType = ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                }) {
+                    Icon(
+                        painterResource(id = R.drawable.attach_image),
+                        contentDescription = null,
+                        Modifier.size(48.dp),
+                        tint = color
+                    )
+                }
+
+                filePicker(addMedia = {a -> setSingleUri(a)}, color = color)
+
+                IconButton(onClick = {
+                    showUrlModalFun()
+                }) {
+                    Icon(
+                        painterResource(id = R.drawable.attach_website),
+                        contentDescription = null,
+                        Modifier.size(26.dp),
+                        tint = color
+                    )
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.Bottom){
+                FloatingActionButton(onClick = { dismissFun() }, containerColor = accentColor, modifier = Modifier.padding(8.dp)) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = null,tint = color)
+                }
+            }
+            }
+        }
+    }
+
+@SuppressLint("Range")
+fun getFileName(uri: Uri,context: Context): String? {
+    var result: String? = null
+    if (uri.scheme == "content") {
+
+        val cursor = context.contentResolver.query(uri, null, null, null, null)
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+            }
+        } finally {
+            cursor?.close()
+        }
+    }
+    if (result == null) {
+        result = uri.path
+        val cut = result!!.lastIndexOf('/')
+        if (cut != -1) {
+            result = result.substring(cut + 1)
+        }
+    }
+    return result
+}
+
+@Composable
+fun playMedia(context: Context,uri: Uri,color: Color){
+
+//    SimpleExoPlayer()
+    Box(
+        Modifier
+            .width(600.dp)
+            .height(450.dp)
+            .padding(top = 0.dp, start = 5.dp, end = 5.dp, bottom = 5.dp)
+            .clip(
+                RoundedCornerShape(
+                    topStart = 0.dp,
+                    topEnd = 0.dp,
+                    bottomEnd = 8.dp,
+                    bottomStart = 8.dp
+                )
+            )
+            .background(color)
+
+    ){
+        val Player = ExoPlayer.Builder(context).build()
+        val mediaItem = MediaItem.fromUri(uri)
+        val playerView = PlayerView(context)
+        Player.setMediaItem(mediaItem)
+        playerView.player = Player
+    
+        DisposableEffect(AndroidView(factory = {playerView},modifier = Modifier
+            .width(600.dp)
+            .height(450.dp))){
+            Player.prepare()
+            Player.playWhenReady = false
+            onDispose {
+                Player.release()
+            }
+        }
+
+   }
+
+}
+
+@Composable
+fun audioPicker(addMedia:(Uri) -> Unit,color: Color){
+    val c = LocalContext.current
+
+    val e = ContextCompat.checkSelfPermission(c,android.Manifest.permission.READ_EXTERNAL_STORAGE)
+    Log.e("Image","Value of e : $e")
+    if(e == PackageManager.PERMISSION_GRANTED){
+
+        val audioLaunch = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent(), onResult = {
+                uri: Uri? ->
+            run {
+                if(uri != null){
+                    addMedia(uri)
+                    val d =  getFileName(uri,c)
+                    Log.e("Music Uri","Music Uri is $uri and $d")
+                }
+            }
+        }
+        )
+
+        Log.e("Music","Permission of Music is Remebered")
+
+        IconButton(onClick = { audioLaunch.launch("audio/*") }) {
+            Icon(painter = painterResource(id = R.drawable.attach_music), contentDescription = null,tint = color)
+        }
+
+    }else{
+
+        val audioLaunch = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent(), onResult = {
+                uri: Uri? ->
+            run {
+                if(uri != null){
+                    addMedia(uri)
+                    val d =  getFileName(uri,c)
+                    Log.e("Music Uri","Music Uri is $uri and $d")
+                }
+            }
+        }
+        )
+
+        val permissionLaunch = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission(), onResult ={
+                isGranted ->
+            run {
+                audioLaunch.launch("audio/*")
+            }
+        } )
+
+        Log.e("Music","Permission of Music Ask first time")
+        IconButton(onClick = {permissionLaunch.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE) }) {
+            Icon(painter = painterResource(id = R.drawable.attach_music), contentDescription = null,tint = color)
+        }
     }
 }
 
 
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun showImageModal(isOkay: Boolean,dismissFun: () -> Unit,accentColor: Color,imageUriList: List<Uri>?){
+fun filePicker(addMedia:(Uri) -> Unit,color: Color){
+
+    val c = LocalContext.current
+
+    val e = ContextCompat.checkSelfPermission(c,android.Manifest.permission.READ_EXTERNAL_STORAGE)
+    Log.e("Image","Value of e : $e")
+    if(e == PackageManager.PERMISSION_GRANTED){
+
+        val audioLaunch = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent(), onResult = {
+                uri: Uri? ->
+            run {
+                if(uri != null){
+                    addMedia(uri)
+                    val d =  getFileName(uri,c)
+                    Log.e("Music Uri","Music Uri is $uri and $d")
+                }
+            }
+        }
+        )
+
+        Log.e("Music","Permission of Music is Remebered")
+
+        IconButton(onClick = { audioLaunch.launch("*/*") }) {
+            Icon(painter = painterResource(id = R.drawable.attach_file), contentDescription = null,tint = color)
+        }
+
+    }else{
+
+        val fileLaunch = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent(), onResult = {
+                uri: Uri? ->
+            run {
+                if(uri != null){
+                    addMedia(uri)
+                    val d =  getFileName(uri,c)
+                    Log.e("Music Uri","Music Uri is $uri and $d")
+                }
+            }
+        }
+        )
+
+        val permissionLaunch = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission(), onResult ={
+                isGranted ->
+            run {
+                fileLaunch.launch("*/*")
+            }
+        } )
+
+        Log.e("Music","Permission of Music Ask first time")
+        IconButton(onClick = {permissionLaunch.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE) }) {
+            Icon(painter = painterResource(id = R.drawable.attach_file), contentDescription = null,tint = color)
+        }
+    }
+}
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Boolean,dismissFun: () -> Unit,onSubmit:( String,String ) ->Unit,fontColor: Color, accentColor: Color){
+
+    var nameValue by remember {
+        mutableStateOf<String>(" ")
+    }
+
+    var numberValue by remember {
+        mutableStateOf<String>(" ")
+    }
+
     if (isOkay) {
         Dialog(onDismissRequest = {dismissFun()}, properties = DialogProperties(dismissOnBackPress = true,dismissOnClickOutside = true),content = {
             Card(shape = RoundedCornerShape(10.dp), modifier = Modifier
-                .width(420.dp)
-                .height(620.dp)
-                .padding(14.dp)
+                .width(500.dp)
+                .height(400.dp)
+                .padding(8.dp)
                 .graphicsLayer { transformOrigin = TransformOrigin.Center },
                 colors = cardColors(accentColor)
             ) {
                 Column(modifier = Modifier
-                    .verticalScroll(rememberScrollState())) {
-                    if(imageUriList != null){
-                    for (i in imageUriList) {
-                        AsyncImage(
-                            model = i, contentDescription = null, modifier = Modifier
-                                .padding(8.dp), contentScale = ContentScale.Fit
+                    .fillMaxSize()
+                    .padding(5.dp)
+                    .verticalScroll(state = rememberScrollState(), enabled = true), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+
+                    Text("Attach $nameTwo :",color= fontColor, fontSize = 24.sp, fontFamily = Comfortaa ,modifier = Modifier.padding(5.dp))
+
+                    OutlinedTextField(
+                        value = nameValue,
+                        singleLine = true,
+                        onValueChange = { nameValue = it },
+                        textStyle = TextStyle(
+                            fontFamily = Comfortaa,
+                            fontSize = 20.sp,
+                            color = fontColor
+                        ),
+                        label = {
+                            Text(
+                                nameOne,
+                                color = fontColor,
+                                fontFamily = Comfortaa,
+                                fontSize = 18.sp
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 5.dp),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = fontColor,
+                            unfocusedBorderColor = fontColor,
+                                    cursorColor = fontColor
+                        )
+                    )
+
+                    if(keyboard) {
+                        OutlinedTextField(
+                            value = numberValue,
+                            singleLine = true,
+                            onValueChange = { numberValue = it },
+                            textStyle = TextStyle(
+                                fontFamily = Comfortaa,
+                                fontSize = 20.sp,
+                                color = fontColor
+                            ),
+                            label = {
+                                Text(
+                                    nameTwo,
+                                    color = fontColor,
+                                    fontFamily = Comfortaa,
+                                    fontSize = 18.sp
+                                )
+                            },
+
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Next,
+                                keyboardType = KeyboardType.Phone
+                            ),
+
+
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 5.dp),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                focusedBorderColor = fontColor,
+                                unfocusedBorderColor = fontColor,
+                                cursorColor = fontColor
+                            )
+                        )
+                    }else{
+                        OutlinedTextField(
+                            value = numberValue,
+                            singleLine = true,
+                            onValueChange = { numberValue = it },
+                            textStyle = TextStyle(
+                                fontFamily = Comfortaa,
+                                fontSize = 20.sp,
+                                color = fontColor
+                            ),
+                            label = {
+                                Text(
+                                    nameTwo,
+                                    color = fontColor,
+                                    fontFamily = Comfortaa,
+                                    fontSize = 18.sp
+                                )
+                            },
+
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Next,
+                            ),
+
+
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 5.dp),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                focusedBorderColor = fontColor,
+                                unfocusedBorderColor = fontColor,
+                                cursorColor = fontColor
+                            )
                         )
                     }
-                    }else{
-                        Text("O File Attached")
+
+                    TextButton(onClick = { onSubmit(nameValue,numberValue) }) {
+                        Text("Add",color= accentColor, fontSize = 24.sp, fontFamily = Comfortaa ,modifier = Modifier
+                            .background(
+                                fontColor,
+                                RoundedCornerShape(5.dp)
+                            )
+                            .padding(5.dp))
                     }
+
+
                 }
+            }
+        })
+    }
+}
+
+
+
+
+@Composable
+fun addBackGround(changeBackGround:(Uri) -> Unit,fontColor: Color){
+    val context = LocalContext.current
+
+    val pickMedia = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(), onResult = { uri: Uri? ->
+                 if(uri != null){
+                     val imageName =getFileName(uri,context)
+                     val internalDir = context.filesDir
+                     val slectedUri: Uri = uri
+                     val destined = File(internalDir,imageName)
+
+                     try {
+                         val inputStream: InputStream? = context.contentResolver.openInputStream(slectedUri)
+                         val outputStream: OutputStream = FileOutputStream(destined)
+
+                         inputStream?.use { input ->
+                             outputStream.use { output ->
+                                 input.copyTo(output, bufferSize = 4 * 1024)
+                             }
+                         }
+
+                         val updatedUri = Uri.fromFile(File(internalDir,imageName))
+                         changeBackGround(updatedUri)
+
+                         Log.e("New Uri","$updatedUri is here")
+
+                         // At this point, 'destinationFile' contains the copied image in internal storage
+                     } catch (e: Exception) {
+                         // Handle exceptions that may occur during the copy operation
+                         Log.e("New Uri","$e in getting new uri")
+
+                     }
+                 }
+            Log.e("New Uri","what going on $uri")
+
+
+            val files = context.filesDir.listFiles()
+                for (file in files) {
+                    val fileName = file.name
+                    Log.e("All File","File exist in inter ${file.absoluteFile} ${file.name} ${file}")
                 }
-            })
-        }
+        })
+
+    IconButton(onClick = { pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+        Icon(painterResource(id = R.drawable.attach_background), contentDescription = null, tint = fontColor)
+    } 
 }

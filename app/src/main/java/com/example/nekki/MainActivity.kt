@@ -94,15 +94,20 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationRequest
+import android.net.Uri
+import android.os.Build
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.requestPermissions
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import com.example.nekki.ui.theme.checkcInternetStatus
+import com.example.nekki.ui.theme.fontColorList
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.delay
@@ -127,15 +132,17 @@ val Comfortaa = FontFamily(
 val SkyBlue = Color(33, 150, 243)
 
 class MainActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+//        window.navigationBarColor = R.color.teal_200
 
         setContent {
             Box(){
                MyApp()
             }
+
         }
       }
     }
@@ -173,6 +180,41 @@ fun MyApp() {
         mutableStateOf(0.0)
     }
 
+    var globalBackgroundImage by remember {
+        mutableStateOf(R.drawable.bts)
+    }
+
+    val defaultImageUri = Uri.parse("android.resource://${LocalContext.current.packageName}/${R.drawable.bts_2}")
+    val context = LocalContext.current
+
+    val sharedPreferences = remember {
+     context.getSharedPreferences("customaization",Context.MODE_PRIVATE)
+    }
+
+    val editor = remember {
+        sharedPreferences.edit()
+    }
+
+    if (!sharedPreferences.contains("Accentcolor")) {
+        editor.putInt("Accentcolor", 1)
+    }
+
+    if (!sharedPreferences.contains("Fontcolor")) {
+        editor.putInt("Fontcolor", 0)
+    }
+
+    if (!sharedPreferences.contains("BackgroundImage")) {
+        editor.putString("BackgroundImage", defaultImageUri.toString())
+    }
+    editor.apply()
+
+
+    val fontColor = sharedPreferences.getInt("Fontcolor",0)
+    val accentColor = sharedPreferences.getInt("Accentcolor",1)
+    val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.bts.toString())
+
+    val selectedFontColor =  fontColorList.get(fontColor)
+    val selectedAccentColor =  fontColorList.get(accentColor)
 
     CustomScaffold(
        topBar = {
@@ -190,18 +232,18 @@ fun MyApp() {
                           Modifier
                               .border(
                                   2.dp,
-                                  SkyBlue,
+                                  selectedAccentColor,
                                   shape = RoundedCornerShape(10.dp, 0.dp, 0.dp, 10.dp)
                               )
                               .background(
-                                  if (choosenState == CurrentState.entries) SkyBlue else Color.White,
+                                  if (choosenState == CurrentState.entries) selectedAccentColor else selectedFontColor,
                                   shape = RoundedCornerShape(10.dp, 0.dp, 0.dp, 10.dp)
                               )
                       ) {
                           Text(
                               text = "Entries",
                               style = TextStyle(
-                                  if(choosenState == CurrentState.entries)Color.White else SkyBlue ,
+                                  if(choosenState == CurrentState.entries) selectedFontColor else selectedAccentColor ,
                                   letterSpacing = 1.sp,
                                   fontFamily = Comfortaa
                               ),
@@ -213,11 +255,11 @@ fun MyApp() {
                           Modifier
                               .border(
                                   2.dp,
-                                  SkyBlue,
+                                  selectedAccentColor,
                                   shape = RoundedCornerShape(0.dp, 0.dp, 0.dp, 0.dp)
                               )
                               .background(
-                                  if (choosenState == CurrentState.calendar) SkyBlue else Color.White,
+                                  if (choosenState == CurrentState.calendar) selectedAccentColor else selectedFontColor,
 
                                   shape = RoundedCornerShape(0.dp, 0.dp, 0.dp, 0.dp)
                               )
@@ -225,7 +267,7 @@ fun MyApp() {
                       Text(
                           text = "Calendar",
                           style = TextStyle(
-                              if(choosenState == CurrentState.calendar)Color.White else SkyBlue ,
+                              if(choosenState == CurrentState.calendar) selectedFontColor else selectedAccentColor,
                               letterSpacing = 1.sp,
                               fontFamily = Comfortaa
                           ),
@@ -234,12 +276,14 @@ fun MyApp() {
                   }
                      NaviDiary(
                          context = LocalContext.current,
+                         selectedFontColor,
+                         selectedAccentColor,
                          choosenState = choosenState,
                          choosenStateFunc = {choosenState = CurrentState.diary},
                          latlang = {l-> latitude = l.latitude;longitude = l.longitude}
                      )
                   }
-                      Text(text = "Diary", style = TextStyle(fontSize = 20.sp, fontFamily = Comfortaa), color = SkyBlue)
+//                      Text(text = "Diary", style = TextStyle(fontSize = 20.sp, fontFamily = Comfortaa), color = SkyBlue)
               }
               }
        },
@@ -257,9 +301,15 @@ fun MyApp() {
                    else if(choosenState == CurrentState.calendar)
                    {
                        Calendar()
+                       BackHandler(true){
+                           choosenState = CurrentState.entries
+                       }
                    }
                    else if(choosenState == CurrentState.diary){
-                       Diary(latitude,longitude)
+                       Diary(latitude,longitude,sharedPreferences)
+                       BackHandler(true){
+                           choosenState = CurrentState.entries
+                       }
                    }
                }
            }
@@ -268,7 +318,7 @@ fun MyApp() {
 }
 
 @Composable
-fun NaviDiary(context: Context,choosenState: CurrentState,choosenStateFunc: () -> Unit,latlang: (Location) -> Unit){
+fun NaviDiary(context: Context,selectedFontColor: Color,selectedAccentColor:Color,choosenState: CurrentState,choosenStateFunc: () -> Unit,latlang: (Location) -> Unit){
    TextButton(
         onClick = { choosenStateFunc()
 
@@ -279,31 +329,35 @@ fun NaviDiary(context: Context,choosenState: CurrentState,choosenStateFunc: () -
                 ) == PackageManager.PERMISSION_GRANTED -> {
 
                     var fusedLocation: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
-                    fusedLocation.getCurrentLocation(LocationRequest.QUALITY_HIGH_ACCURACY,null).addOnSuccessListener { location: Location ->
+                    fusedLocation.getCurrentLocation(LocationRequest.QUALITY_HIGH_ACCURACY,null).addOnSuccessListener { location: Location? ->
                         run {
-                            latlang(
-                                location
-                            )
+                            if (location != null) {
+                                latlang(
+                                    location
+                                )
+                            }else{
+                                Log.e("Loation Null","This error show that Location Recived Null $location")
+                            }
                         }
                     }
                 }
             }
         },
-        Modifier
-            .border(
-                2.dp,
-                SkyBlue,
-                shape = RoundedCornerShape(0.dp, 10.dp, 10.dp, 0.dp)
-            )
-            .background(
-                if (choosenState == CurrentState.diary) SkyBlue else Color.White,
-                shape = RoundedCornerShape(0.dp, 10.dp, 10.dp, 0.dp)
-            )
+       Modifier
+           .border(
+               2.dp,
+               selectedAccentColor,
+               shape = RoundedCornerShape(0.dp, 10.dp, 10.dp, 0.dp)
+           )
+           .background(
+               if (choosenState == CurrentState.diary) selectedAccentColor else selectedFontColor,
+               shape = RoundedCornerShape(0.dp, 10.dp, 10.dp, 0.dp)
+           )
     ) {
         Text(
             text = "Diary",
             style = TextStyle(
-                if(choosenState == CurrentState.diary)Color.White else SkyBlue ,
+                if(choosenState == CurrentState.diary) selectedFontColor else selectedAccentColor ,
                 letterSpacing = 1.sp,
                 fontFamily = Comfortaa
             ),
