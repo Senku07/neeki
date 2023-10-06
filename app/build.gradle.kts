@@ -48,6 +48,7 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("String","WEATHER_KEY","$apiKey")
+
         }
         debug{
             buildConfigField("String","WEATHER_KEY","$apiKey")
@@ -102,4 +103,6 @@ dependencies {
     implementation ("androidx.media3:media3-exoplayer:1.1.1")
     implementation ("androidx.media3:media3-exoplayer-dash:1.1.1")
     implementation ("androidx.media3:media3-ui:1.1.1")
+    implementation ("com.google.code.gson:gson:2.10.1")
+
 }
