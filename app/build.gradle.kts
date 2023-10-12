@@ -1,4 +1,3 @@
-import java.io.InputStreamReader
 import java.util.Properties
 
 plugins {
@@ -24,6 +23,7 @@ android {
 
     buildFeatures{
         buildConfig = true
+        compose = true
     }
 
     defaultConfig {
@@ -62,9 +62,8 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    buildFeatures {
-        compose = true
-    }
+
+    
     composeOptions {
         kotlinCompilerExtensionVersion = "1.4.3"
     }
@@ -104,5 +103,7 @@ dependencies {
     implementation ("androidx.media3:media3-exoplayer-dash:1.1.1")
     implementation ("androidx.media3:media3-ui:1.1.1")
     implementation ("com.google.code.gson:gson:2.10.1")
+    implementation("androidx.compose.material3:material3:1.1.2")
+    implementation("androidx.compose.material3:material3-window-size-class:1.1.2")
 
 }

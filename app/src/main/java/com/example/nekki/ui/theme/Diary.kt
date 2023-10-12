@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationManager
 import android.location.LocationRequest
 import android.net.ConnectivityManager
 import android.net.Uri
@@ -27,6 +28,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +37,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,19 +54,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardColors
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -89,8 +92,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -103,7 +109,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.example.nekki.BuildConfig
-import com.example.nekki.Comfortaa
 import com.example.nekki.R
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -126,66 +131,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-val SkyBlue = Color(33, 150, 243)
-
-val fontColorList = listOf<Color>(
-    Color.White,
-    Color(93, 137, 179, 255),
-            SkyBlue,
-    Color(85, 239, 196, 255),
-    Color(129, 236, 236,255),
-    Color(116, 185, 255),
-    Color(162, 155, 254),
-    Color(223, 230, 233),
-    Color(0, 184, 148),
-    Color(0, 206, 201),
-    Color (9, 132, 227),
-    Color   (108, 92, 231),
-    Color   (178, 190, 195),
-    Color   (255, 234, 167),
-    Color   (250, 177, 160),
-    Color   (255, 118, 117),
-    Color   (253, 121, 168),
-    Color   (99, 110, 114),
-    Color   (253, 203, 110),
-    Color   (225, 112, 85),
-    Color   (214, 48, 49),
-    Color   (232, 67, 147),
-    Color   (45, 52, 54),
-    Color   (26, 188, 156),
-    Color   (46, 204, 113),
-    Color   (52, 152, 219),
-    Color   (155, 89, 182),
-    Color    (52, 73, 94),
-    Color    (22, 160, 133),
-    Color    (39, 174, 96),
-    Color    (41, 128, 185),
-    Color    (142, 68, 173),
-    Color    (44, 62, 80),
-    Color    (241, 196, 15),
-    Color    (230, 126, 34),
-    Color   (231, 76, 60),
-    Color(236, 240, 241),
-    Color   (149, 165, 166),
-    Color   (243, 156, 18),
-    Color   (211, 84, 0),
-    Color   (192, 57, 43),
-    Color   (189, 195, 199),
-    Color.Black,
-    Color.Gray,
-    Color.DarkGray,
-    Color.LightGray,
-    Color.Red,
-    Color.Green,
-    Color.Blue,
-    Color.Cyan,
-    Color.Magenta,
-    Color.Yellow,
-    Color(255, 165, 0),  // Orange
-    Color(128, 0, 128),  // Purple
-    Color(0, 128, 128),
-    Color   (127, 140, 141),
-)
 
 
 @SuppressLint("CoroutineCreationDuringComposition", "SuspiciousIndentation")
@@ -196,7 +141,7 @@ val fontColorList = listOf<Color>(
 fun Diary(sharedPreferences: SharedPreferences) {
     val date = Date()
     var showEmoji by remember {
-        mutableStateOf(true)
+        mutableStateOf(false)
     }
 
 
@@ -238,9 +183,10 @@ fun Diary(sharedPreferences: SharedPreferences) {
         painterResource(id = R.drawable.frustrated),
         painterResource(id = R.drawable.extrem_angry),
         painterResource(id = R.drawable.color_bts),
+        painterResource(id = R.drawable.color_beating_heart),
         painterResource(id = R.drawable.cat_grinning),
         painterResource(id = R.drawable.cat_kissing),
-        painterResource(id = R.drawable.cat_face_smile),
+        painterResource(id = R.drawable.cat_eye_close),
         painterResource(id = R.drawable.cat_smiling_cat_with_heart_eyes),
         painterResource(id = R.drawable.cat_weary),
         painterResource(id = R.drawable.cat_with_tears_of_joy),
@@ -248,21 +194,30 @@ fun Diary(sharedPreferences: SharedPreferences) {
         painterResource(id = R.drawable.cat_pouting),
         painterResource(id = R.drawable.cat_crying),
         painterResource(id = R.drawable.color_expressionless_face),
+        painterResource(id = R.drawable.color_smiling_face),
+        painterResource(id = R.drawable.color_smiling_face_with_halo),
         painterResource(id = R.drawable.color_grinning_face),
         painterResource(id = R.drawable.color_beaming_face_with_smiling_eyes),
         painterResource(id = R.drawable.color_face_blowing_a_kiss),
         painterResource(id = R.drawable.color_kissing_face_with_closed_eyes),
+        painterResource(id = R.drawable.color_face_with_tears_of_joy),
         painterResource(id = R.drawable.color_astonished_face),
+        painterResource(id = R.drawable.color_drooling_face),
+        painterResource(id = R.drawable.color_sleeping_face),
+        painterResource(id = R.drawable.color_face_screaming_in_fear),
         painterResource(id = R.drawable.color_cold_face),
+        painterResource(id = R.drawable.color_hot_face),
         painterResource(id = R.drawable.color_anxious_face_with_sweat),
+        painterResource(id = R.drawable.color_face_with_thermometer),
         painterResource(id = R.drawable.color_face_vomiting),
-        painterResource(id = R.drawable.color_confounded_face),
         painterResource(id = R.drawable.color_confused_face),
         painterResource(id = R.drawable.color_crying_face),
-        painterResource(id = R.drawable.color_disappointed_face),
         painterResource(id = R.drawable.color_face_exhaling),
         painterResource(id = R.drawable.color_angry_face),
+        painterResource(id = R.drawable.color_loudly_crying_face),
     )
+
+
 
     val emojiListCache = LruCache<String,List<Painter>>(4*1024*1024)
     emojiListCache.put("emojiListCache",emojiList)
@@ -270,12 +225,30 @@ fun Diary(sharedPreferences: SharedPreferences) {
     val colorListCache = LruCache<String,List<Color>>(4*1024*1024)
     colorListCache.put("colorListCache", fontColorList)
 
+    val fontFamilyCache = LruCache<String,List<Int>>(4*1024*1024)
+    fontFamilyCache.put("fontFamilyCache", fontFamilyList)
+
     val fontColor = sharedPreferences.getInt("Fontcolor",0)
+    val fontFamily = sharedPreferences.getInt("Fontfamily",0)
+    val fontSize = sharedPreferences.getInt("Fontsize",2)
     val accentColor = sharedPreferences.getInt("Accentcolor",1)
     val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.bts.toString())
 
-    val selectedFontColor =  fontColorList.get(fontColor)
-    val selectedAccentColor =  fontColorList.get(accentColor)
+    var selectedFontColor by remember {
+        mutableStateOf(fontColorList.get(fontColor))
+    }
+
+    var selectedAccentColor by remember {
+        mutableStateOf(fontColorList.get(accentColor))
+    }
+
+    var selectedFontSize by remember {
+        mutableStateOf(fontSizeList.get(fontSize))
+    }
+
+    var selectedFontFamily by remember {
+        mutableStateOf<FontFamily>(FontFamily(Font((fontFamilyList.get(fontFamily)))))
+    }
 
 
     var updateBackGroundImage by remember {
@@ -294,6 +267,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
         mutableStateOf(1)
     }
 
+
     AnimatedVisibility(
         visible = showEmoji,
         enter = scaleIn() + expandVertically(expandFrom = Alignment.CenterVertically),
@@ -310,14 +284,22 @@ fun Diary(sharedPreferences: SharedPreferences) {
         )
     }
 
-        fontcolorModal(
+        if(fontcolorBoolean){
+            BackHandler {
+                fontcolorBoolean = false
+            }
+        }
+
+        colorPickerScreen(
             cache = colorListCache,
-        isOkay = fontcolorBoolean ,
+            fontFamilyCache = fontFamilyCache,
+           isOkay = fontcolorBoolean ,
         onFontClick = { clickedIndex ->
             val editor = sharedPreferences.edit()
             editor.putInt("Fontcolor",clickedIndex)
             editor.apply()
             fontColorId = clickedIndex
+            selectedFontColor = fontColorList.get(clickedIndex)
         },
         dismissFun = { fontcolorBoolean = false },
             color = selectedFontColor,
@@ -326,9 +308,25 @@ fun Diary(sharedPreferences: SharedPreferences) {
                 val editor = sharedPreferences.edit()
                 editor.putInt("Accentcolor",clickedInex)
                 editor.apply()
+                selectedAccentColor =  fontColorList.get(clickedInex)
                             },
-            accentColor = selectedAccentColor
-
+            accentColor = selectedAccentColor,
+            onFontSizeClick = { clickedInex ->
+                val editor = sharedPreferences.edit()
+                editor.putInt("Fontsize",clickedInex)
+                editor.apply()
+                selectedFontSize = fontSizeList.get(clickedInex)
+            },
+            FontSize = selectedFontSize,
+            FontFamily = selectedFontFamily,
+            onFontFamilyClick = { clickedInex ->
+                val editor = sharedPreferences.edit()
+                editor.putInt("Fontfamily",clickedInex)
+                editor.apply()
+                selectedFontFamily = FontFamily(Font(fontFamilyList.get(clickedInex)))
+            },
+            colorList = fontColorList,
+            familyList = fontFamilyList
         )
 
 
@@ -344,6 +342,19 @@ fun Diary(sharedPreferences: SharedPreferences) {
             delay(5000)
         }
     }
+
+    var isLocation by remember {
+        mutableStateOf(true)
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            isLocation = checkLocation(context)
+            delay(6000)
+        }
+    }
+
+    var showLocationOff by remember { mutableStateOf(false) }
 
     var permissionGranted by remember {
         mutableStateOf(true)
@@ -373,14 +384,14 @@ fun Diary(sharedPreferences: SharedPreferences) {
         showContactModal("Name","Contact Number",true,showContactAndUrl, dismissFun = {showContactAndUrl = false},onSubmit = {s,i -> contactsAndUrlList += Pair(
             s,
             i
-        );showContactAndUrl = false},selectedFontColor,selectedAccentColor )
+        );showContactAndUrl = false},selectedFontColor,selectedAccentColor,selectedFontFamily)
     }
 
     if(showContactAndUrl2){
         showContactModal("Name","Url",false,showContactAndUrl2, dismissFun = {showContactAndUrl2 = false},onSubmit = {s,i -> contactsAndUrlList += Pair(
             s,
             i
-        );showContactAndUrl2 = false},selectedFontColor,selectedAccentColor )
+        );showContactAndUrl2 = false},selectedFontColor,selectedAccentColor,selectedFontFamily)
     }
 
     if(showImage){
@@ -393,7 +404,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
            imageUriList =  imageUriList + a }, setList = { a ->
                 imageUriList = imageUriList + a }, dismissFun = {showImage = false},
             accentColor = selectedAccentColor,color = selectedFontColor,
-            imageUriList = imageUriList, contactandUrlList = contactsAndUrlList)
+            imageUriList = imageUriList, contactandUrlList = contactsAndUrlList, selectedFontFamily = selectedFontFamily)
     }
 
     if(showImage){
@@ -423,7 +434,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
         mutableStateOf<Root?>(null)
     }
 
-    if(latitudeDiary != 0.0 && longitudeDiary != 0.0 && weatherData == null) {
+    if(latitudeDiary != 0.0 && longitudeDiary != 0.0 && weatherData == null && isLocation == true) {
         rememberCoroutineScope().launch {
             weatherData = getWeather(latitudeDiary, longitudeDiary)
         }
@@ -437,9 +448,12 @@ fun Diary(sharedPreferences: SharedPreferences) {
             dismissFun = { popUpweather =  false },
             data = weatherData!!,
             color = selectedFontColor,
-            accentColor = selectedAccentColor
+            accentColor = selectedAccentColor,
+            selectedFontFamily = selectedFontFamily
         )
     }
+
+    var  showBackground by remember { mutableStateOf(false) }
 
     val locationPermission = ContextCompat.checkSelfPermission(LocalContext.current,android.Manifest.permission.ACCESS_FINE_LOCATION)
     val storagePermission = ContextCompat.checkSelfPermission(LocalContext.current,android.Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -457,6 +471,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
             onPermissionGranted = {askStoragePermission = false}
         )
     }
+
 
 
     var nwLat by remember {
@@ -521,7 +536,11 @@ fun Diary(sharedPreferences: SharedPreferences) {
 
 
     Box(modifier = Modifier
-        .then(if (isContentFieldActive) {Modifier.padding(0.dp) }else Modifier.padding(10.dp))
+        .then(
+            if (isContentFieldActive) {
+                Modifier.padding(0.dp)
+            } else Modifier.padding(10.dp)
+        )
         .fillMaxSize()) {
 
 
@@ -530,24 +549,33 @@ fun Diary(sharedPreferences: SharedPreferences) {
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp)),
+                .then(
+                    if (isContentFieldActive) {
+                        Modifier.clip(RoundedCornerShape(0.dp))
+                    } else Modifier.clip(RoundedCornerShape(8.dp))
+                ),
             contentDescription = null,
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
         Column(
             Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-                .padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Top
+                .then(
+                    if (isContentFieldActive) {
+                        Modifier.padding(0.dp)
+                    } else (Modifier.padding(2.dp))
+                ),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Top
         ) {
 
             if(!isContentFieldActive) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 5.dp, vertical = 5.dp)){
-                Text(text = formated, fontFamily = Comfortaa, fontSize = 24.sp, color = selectedFontColor)
+                Text(text = formated, fontFamily = selectedFontFamily, fontSize = 24.sp, color = selectedFontColor)
                 if(weatherData != null){
-                    Text("${weatherData!!.current.temp_c}°C/${weatherData!!.current.condition.text} ", fontFamily = Comfortaa,color = selectedFontColor, fontSize = 18.sp)
+                    Text("${weatherData!!.current.temp_c}°C/${weatherData!!.current.condition.text} ", fontFamily = selectedFontFamily,color = selectedFontColor, fontSize = 18.sp)
                 }else{
                     Icon(painterResource(id = R.drawable.cloud_off),contentDescription = null ,tint = selectedFontColor)
                 }
@@ -559,7 +587,8 @@ fun Diary(sharedPreferences: SharedPreferences) {
                     onValueChange = { titleText = it },
 //                colors =
                     textStyle = TextStyle(
-                        fontSize = 20.sp,
+                        fontSize = selectedFontSize.sp,
+                        fontFamily = selectedFontFamily,
                         color = selectedFontColor,
                         lineHeight = 0.sp
 
@@ -569,14 +598,16 @@ fun Diary(sharedPreferences: SharedPreferences) {
                         Text(
                             "Title...",
                             color = selectedFontColor,
-                            fontSize = 16.sp,
+                            fontFamily = selectedFontFamily,
+                            fontSize = selectedFontSize.sp,
                         )
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onDone = { focusKeyboard.clearFocus() }),
+                    keyboardActions = KeyboardActions( onDone = { focusKeyboard.clearFocus() }),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 5.dp),
+                        .padding(horizontal = 5.dp)
+                    ,
                     colors = TextFieldDefaults.outlinedTextFieldColors(
                         focusedBorderColor = Color.Unspecified,
                         unfocusedBorderColor = Color.Unspecified,
@@ -590,14 +621,16 @@ fun Diary(sharedPreferences: SharedPreferences) {
                 value = contentText,
                 onValueChange = { contentText = it },
                 textStyle = TextStyle(
-                    fontSize = 20.sp,
+                    fontSize = selectedFontSize.sp,
+                    fontFamily = selectedFontFamily,
                     color = selectedFontColor
                 ),
                 placeholder = {
                     Text(
                         "Write here...",
                         color = selectedFontColor,
-                        fontSize = 16.sp,
+                        fontFamily = selectedFontFamily,
+                        fontSize = selectedFontSize.sp,
 
                     )
                 },
@@ -605,8 +638,16 @@ fun Diary(sharedPreferences: SharedPreferences) {
                 keyboardActions = KeyboardActions(onDone = { focusKeyboard?.clearFocus() }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.9f)
-                    .then(if (isContentFieldActive) {Modifier.padding(0.dp) }else Modifier.padding(2.dp))
+                    .then(
+                        if (isContentFieldActive) {
+                            Modifier.fillMaxHeight()
+                        } else Modifier.fillMaxHeight(0.9f)
+                    )
+                    .then(
+                        if (isContentFieldActive) {
+                            Modifier.padding(0.dp)
+                        } else Modifier.padding(2.dp)
+                    )
                     .focusRequester(focusRequester)
                     .onFocusChanged { focusState -> isContentFieldActive = focusState.isFocused },
                     colors = TextFieldDefaults.outlinedTextFieldColors(
@@ -643,7 +684,12 @@ fun Diary(sharedPreferences: SharedPreferences) {
                     IconButton(onClick = { showOfflineLoc = true}) {
                         Icon(painterResource(id = R.drawable.cloud_off),contentDescription = null,tint = selectedFontColor)
                     }
-                }else if(locationPermission == PackageManager.PERMISSION_DENIED){
+                }else if(!isLocation){
+                    IconButton(onClick = { showLocationOff = true  }) {
+                        Icon(painterResource(id = R.drawable.cloud_off),contentDescription = null,tint = selectedFontColor)
+                    }
+                }
+                else if(locationPermission == PackageManager.PERMISSION_DENIED){
                     IconButton(onClick = { askPermission = true}) {
                         Icon(painterResource(id = R.drawable.cloud_off),contentDescription = null,tint = selectedFontColor)
                     }
@@ -674,7 +720,12 @@ fun Diary(sharedPreferences: SharedPreferences) {
                            tint = selectedFontColor
                        )
                    }
-                }else if(locationPermission == PackageManager.PERMISSION_GRANTED) {
+                }else if(!isLocation){
+                  IconButton(onClick = { showLocationOff = true  }) {
+                      Icon(painterResource(id = R.drawable.location_off),contentDescription = null,tint = selectedFontColor)
+                  }
+              }
+              else if(locationPermission == PackageManager.PERMISSION_GRANTED) {
                   IconButton(onClick = {
                       var fusedLocation: FusedLocationProviderClient =
                           LocationServices.getFusedLocationProviderClient(context)
@@ -728,14 +779,15 @@ fun Diary(sharedPreferences: SharedPreferences) {
 
 
 
-                addBackGround(changeBackGround = {uri ->
-                    val editor = sharedPreferences.edit();
-                    editor.putString("BackgroundImage",uri.toString())
-                    Log.e("Uri","New Back Ground image $uri")
-                    editor.apply()
+                IconButton(onClick = { showBackground = !showBackground}) {
+                    Icon(
+                        painterResource(id = R.drawable.attach_background),
+                        contentDescription = null,
+                        tint = selectedFontColor
+                    )
+                }
 
-                    updateBackGroundImage = uri
-                },selectedFontColor)
+
 
             }
             }
@@ -745,7 +797,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
 
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.End, modifier = Modifier
                     .fillMaxSize()
-                    .padding(0.dp)) {
+                    .padding(8.dp)) {
                     FloatingActionButton(
                         onClick = { focusManager.clearFocus();isContentFieldActive = false },
                         containerColor = selectedAccentColor
@@ -761,17 +813,27 @@ fun Diary(sharedPreferences: SharedPreferences) {
         }
 
         if (!checkInternet) {
-            offlineSnackBar(context)
-        }
-
-        if (showOfflineLoc) {
-            offlineSnackBar(context)
-
-            rememberCoroutineScope().launch {
-                delay(6000)
-                showOfflineLoc = false
+            var a by remember {
+                mutableStateOf(true)
             }
+            OfflineAlertDialog(a,onCloseDialog = { a = false},"Offline","Unable to use Premium Feature and attach Weather Data. Internet connection is required.",
+                painterResource(id =  R.drawable.cloud_off))
         }
+
+        if (!isLocation) {
+            var a by remember {
+                mutableStateOf(true)
+            }
+            OfflineAlertDialog(a,onCloseDialog = { a = false},"Location Required","Unable to use Premium Feature and attach Weather Data. Internet connection and Location is Required.",
+                painterResource(id = R.drawable.location_off))
+
+        }
+
+        OfflineAlertDialog(showOfflineLoc,onCloseDialog = { showOfflineLoc = false},"Offline","Unable to use Premium Feature and attach Weather Data. Internet connection is required.",
+            painterResource(id = R.drawable.cloud_off))
+
+        OfflineAlertDialog(showLocationOff,onCloseDialog = { showLocationOff = false},"Location Required","Unable to use Premium Feature and attach Weather Data. Internet connection and Location is Required.",
+            painterResource(id = R.drawable.location_off))
 
         if (!permissionGranted) {
             grantPermissionSnackBar(context = context)
@@ -788,33 +850,32 @@ fun Diary(sharedPreferences: SharedPreferences) {
                 storagePermissionDialogBoolean = false
             }
         }
+
+        if(showBackground){
+            addBackGround(changeBackGround = {uri ->
+                val editor = sharedPreferences.edit();
+                editor.putString("BackgroundImage",uri.toString())
+                Log.e("Uri","New Back Ground image $uri")
+                editor.apply()
+
+                updateBackGroundImage = uri
+            },selectedFontColor)
+        }
     }
 }
 
 
-@SuppressLint("RememberReturnType")
-@OptIn(ExperimentalLayoutApi::class)
+@SuppressLint("RememberReturnType", "SuspiciousIndentation")
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun emojiModal(isOkay: Boolean, onEmojiClick: (Int) -> Unit, function: () -> Unit, cache: LruCache<String,List<Painter>>,emojiList: List<Painter> ,fontColor: Color, accentColor: Color){
 
+        val getEmojiListCache = cache.get("emojiListCache")
         if (isOkay) {
-
-            val getEmojiListCache = cache.get("emojiListCache")
-
-            Dialog(
-                onDismissRequest = { function() },
-                properties = DialogProperties(
-                    dismissOnBackPress = true,
-                    dismissOnClickOutside = true
-                ),
-                content = {
-                    Card(
-                        shape = RoundedCornerShape(10.dp), modifier = Modifier
-                            .width(300.dp)
-                            .height(400.dp)
-                            .padding(8.dp)
-                            .graphicsLayer { transformOrigin = TransformOrigin.Center },
-                        colors = cardColors(accentColor)
+                    ModalBottomSheet(
+                        onDismissRequest = {function()},
+                        modifier = Modifier.fillMaxHeight(0.7F),
+                        containerColor = accentColor
                     ) {
                         FlowRow(
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -822,32 +883,45 @@ fun emojiModal(isOkay: Boolean, onEmojiClick: (Int) -> Unit, function: () -> Uni
                                 .fillMaxWidth()
                                 .verticalScroll(rememberScrollState())
 //                    .background(Color.Red)
-                                .padding(5.dp),
+                                .padding(start = 5.dp, bottom = 5.dp, top = 5.dp, end = 5.dp),
                         ) {
                             if(getEmojiListCache != null) {
-                                for ((index, i) in getEmojiListCache.withIndex()) {
+                                val first10 = getEmojiListCache.take(10)
+
+                                for ((index, i) in first10.withIndex()) {
                                     IconButton(
                                         onClick = { onEmojiClick(index) }, modifier = Modifier
                                             .padding(vertical = 4.dp)
                                     ) {
-                                        if (index < 10) {
-                                            Icon(
-                                                i,
-                                                contentDescription = null,
-                                                tint = fontColor,
-                                                modifier = Modifier.size(48.dp)
-                                            )
-                                        } else {
-                                            Icon(
-                                                i,
-                                                contentDescription = null,
-                                                tint = Color.Unspecified,
-                                                modifier = Modifier.size(48.dp)
-                                            )
+                                        Icon(
+                                            i,
+                                            contentDescription = null,
+                                            tint = fontColor,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                    }
+                                    }
+
+                                    Text("\uD83C\uDF1F Upgrade to Premium for Color Emojis! \uD83C\uDF1F", textAlign = TextAlign.Center,modifier = Modifier.fillMaxWidth())
+
+                                    for((index,i) in getEmojiListCache.withIndex()){
+                                        if(index > 10) {
+                                            IconButton(
+                                                onClick = { onEmojiClick(index) },
+                                                modifier = Modifier
+                                                    .padding(vertical = 4.dp)
+                                            ) {
+                                                Icon(
+                                                    i,
+                                                    contentDescription = null,
+                                                    tint = Color.Unspecified,
+                                                    modifier = Modifier.size(48.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }else{
+                            else{
                                 for ((index, i) in emojiList.withIndex()) {
                                     IconButton(
                                         onClick = { onEmojiClick(index) }, modifier = Modifier
@@ -874,9 +948,8 @@ fun emojiModal(isOkay: Boolean, onEmojiClick: (Int) -> Unit, function: () -> Uni
                             }
                         }
                     }
-                })
 
-    }
+                }
 }
 
 @Composable
@@ -1105,113 +1178,144 @@ fun timestampChange(timeStamp: Long):String{
     return ""
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@SuppressLint("SuspiciousIndentation")
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun fontcolorModal(cache: LruCache<String,List<Color>>,isOkay: Boolean,dismissFun: () -> Unit,onFontClick: (Int) -> Unit,color: Color,onAccentClick: (Int) -> Unit,accentColor: Color){
+fun colorPickerScreen(cache: LruCache<String,List<Color>>,
+                      fontFamilyCache: LruCache<String,List<Int>>,
+                      isOkay: Boolean,
+                      dismissFun: () -> Unit,onFontClick: (Int) -> Unit,
+                      color: Color,onAccentClick: (Int) -> Unit,
+                      accentColor: Color,onFontSizeClick: (Int)->Unit,
+                      FontSize:Int,FontFamily:FontFamily,
+                      onFontFamilyClick: (Int)->Unit,
+                      colorList: List<Color>,
+                      familyList: List<Int>
+){
     if (isOkay) {
-
         val colorListCache = cache.get("colorListCache")
-
-
-        Dialog(onDismissRequest = {dismissFun()}, properties = DialogProperties(dismissOnBackPress = true,dismissOnClickOutside = true),content = {
-            Card(shape = RoundedCornerShape(10.dp), modifier = Modifier
-                .width(300.dp)
-                .height(400.dp)
-                .padding(8.dp)
-                .graphicsLayer { transformOrigin = TransformOrigin.Center },
-                colors = cardColors(accentColor)
-            ) {
-                Text("Color (ㆆ_ㆆ) :",modifier = Modifier.padding(vertical =  0.dp, horizontal = 20.dp),color = color, fontSize = 24.sp, fontFamily = Comfortaa)
-                FlowRow(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-                    .verticalScroll(
-                        rememberScrollState(),
-
-                        ), horizontalArrangement = Arrangement.SpaceBetween)
-               {
-                        Text("Font Color ≧◠ᴥ◠≦",modifier = Modifier.padding(vertical =  0.dp, horizontal = 8.dp),color = color, fontSize = 22.sp, fontFamily = Comfortaa)
-
-                   if(colorListCache != null) {
-
-                       for ((index, c) in colorListCache.withIndex()) {
-                           Button(
-                               onClick = { onFontClick(index) },
-                               modifier = Modifier
-                                   .width(48.dp)
-                                   .height(48.dp)
-                                   .padding(4.dp),
-                               colors = ButtonDefaults.buttonColors(containerColor = c),
-                               shape = RoundedCornerShape(4.dp)
-                           ) {
-                           }
-                       }
-                       Text(
-                           "Accent Color (ɔ◔‿◔)ɔ",
-                           modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
-                           color = color,
-                           fontSize = 20.sp,
-                           fontFamily = Comfortaa
-                       )
-                       for ((index, c) in colorListCache.withIndex()) {
-                           Button(
-                               onClick = { onAccentClick(index) },
-                               modifier = Modifier
-                                   .width(48.dp)
-                                   .height(48.dp)
-                                   .padding(4.dp),
-                               colors = ButtonDefaults.buttonColors(containerColor = c),
-                               shape = RoundedCornerShape(4.dp)
-                           ) {
-                           }
-
-
-                       }
-                   }else{
-
-                       for ((index, c) in fontColorList.withIndex()) {
-                           Button(
-                               onClick = { onFontClick(index) },
-                               modifier = Modifier
-                                   .width(48.dp)
-                                   .height(48.dp)
-                                   .padding(4.dp),
-                               colors = ButtonDefaults.buttonColors(containerColor = c),
-                               shape = RoundedCornerShape(4.dp)
-                           ) {
-                           }
-                       }
-                       Text(
-                           "Accent Color (ɔ◔‿◔)ɔ",
-                           modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
-                           color = color,
-                           fontSize = 20.sp,
-                           fontFamily = Comfortaa
-                       )
-                       for ((index, c) in fontColorList.withIndex()) {
-                           Button(
-                               onClick = { onAccentClick(index) },
-                               modifier = Modifier
-                                   .width(48.dp)
-                                   .height(48.dp)
-                                   .padding(4.dp),
-                               colors = ButtonDefaults.buttonColors(containerColor = c),
-                               shape = RoundedCornerShape(4.dp)
-                           ) {
-                           }
-                       }
-                   }
-
-
-            }
+        var checked by remember {
+            mutableStateOf(true)
         }
-        })
+
+        val fontFamilyList = fontFamilyCache.get("fontFamilyCache")
+        Log.e("Miss","checking what i get on cache miss $fontFamilyList")
+
+                ModalBottomSheet(onDismissRequest = { dismissFun()}, sheetState = rememberModalBottomSheetState(), modifier = Modifier
+                    .fillMaxHeight(0.8F)
+                    .fillMaxWidth(), containerColor = accentColor) {
+                    Column(verticalArrangement = Arrangement.Top, horizontalAlignment = Alignment.Start,modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp, vertical = 2.dp)){
+
+                        Row(modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically){
+                            Text(text = "Customization ",color = color, fontSize = 28.sp, fontFamily = FontFamily)
+                            Icon(painterResource(id = R.drawable.color_lens), tint = color, contentDescription = null,modifier = Modifier.size(36.dp))
+                        }
+
+                     Text(text = "Font Color",color = color, fontSize = 20.sp, fontFamily = FontFamily)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState())){
+
+                            if(colorListCache != null) {
+                                for ((index, i) in colorListCache.withIndex()) {
+                                    IconButton(
+                                        onClick = { onFontClick(index) }, modifier = Modifier
+                                            .width(48.dp)
+                                            .height(48.dp)
+                                            .background(i)
+                                            .padding(4.dp)
+                                    ) {
+                                    }
+                                }
+                                            }else{
+                                for ((index, i) in colorList.withIndex()) {
+                                    IconButton(
+                                        onClick = { onFontClick(index) }, modifier = Modifier
+                                            .width(48.dp)
+                                            .height(48.dp)
+                                            .background(i)
+                                            .padding(4.dp)
+                                    ) {
+                                    }
+                                }
+                                            }
+
+                        }
+                        Spacer(modifier = Modifier.padding(4.dp))
+                        Text(text = "Accent Color",color = color, fontSize = 20.sp, fontFamily = FontFamily)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState())){
+
+                            if(fontColorList != null){
+                            for ((index,i) in colorListCache.withIndex()){
+                                IconButton(onClick = {onAccentClick(index)}, modifier = Modifier
+                                    .width(48.dp)
+                                    .height(48.dp)
+                                    .background(i)
+                                    .padding(4.dp)) {
+                                }
+                            }
+                            }else{
+                                for ((index,i) in colorList.withIndex()){
+                                    IconButton(onClick = {onAccentClick(index)}, modifier = Modifier
+                                        .width(48.dp)
+                                        .height(48.dp)
+                                        .background(i)
+                                        .padding(4.dp)) {
+                                    }
+                                }
+                            }
+
+                        }
+
+                        Text(text = "Font Size",color = color, fontFamily = FontFamily, fontSize = 20.sp, modifier = Modifier.padding(top = 6.dp))
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                            for ((index, i) in fontSizeList.withIndex()) {
+                                TextButton(onClick = { onFontSizeClick(index)},
+                                    Modifier
+                                        .padding(4.dp)
+                                        .background(
+                                            color,
+                                            RoundedCornerShape(4.dp)
+                                        )) {
+                                    if(FontSize == i){
+                                        Text("$i", fontSize = i.sp,fontFamily = FontFamily, color = accentColor
+                                        )
+                                    }else{
+                                        Text("$i", fontSize = i.sp,
+                                            fontFamily = FontFamily,color = accentColor,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Text(text = "Font Style",color = color, fontFamily = FontFamily, fontSize = 20.sp, modifier = Modifier.padding(top = 6.dp))
+                        FlowRow{
+                            if(fontFamilyList != null){
+                        for((index,i) in fontFamilyList.withIndex()){
+                            TextButton(onClick = { onFontFamilyClick(index)}) {
+                               Text("Like",fontSize = 18.sp ,color = color,fontFamily = FontFamily(Font(fontFamilyList.get(index))))
+                            }
+                        }
+                            }
+                            else{
+                                for((index,i) in familyList.withIndex()){
+                                    TextButton(onClick = { onFontFamilyClick(index)}) {
+                                        Text("Like",fontSize = 18.sp ,color = color,fontFamily = FontFamily(Font(familyList.get(index))))
+                                    }
+                                }
+                            }
+                        }
+                    }
+        }
+        }
     }
-}
 
 
 @Composable
-fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String>) -> Unit,showContactModal:() -> Unit,showUrlModalFun: () -> Unit,removeUri:(Uri) -> Unit,setSingleUri:(Uri) -> Unit,dismissFun: () -> Unit,accentColor: Color,color: Color,setList:(List<Uri>)->Unit ,imageUriList: List<Uri>,contactandUrlList: List<Pair<String,String>>){
+fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String>) -> Unit,showContactModal:() -> Unit,showUrlModalFun: () -> Unit,removeUri:(Uri) -> Unit,setSingleUri:(Uri) -> Unit,dismissFun: () -> Unit,accentColor: Color,color: Color,setList:(List<Uri>)->Unit ,imageUriList: List<Uri>,contactandUrlList: List<Pair<String,String>>,selectedFontFamily: FontFamily){
 
     val context = LocalContext.current
     val pickMedia = rememberLauncherForActivityResult(
@@ -1286,7 +1390,7 @@ fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String
                                                         color = accentColor,
                                                         fontSize = 18.sp,
                                                         softWrap = true,
-                                                        fontFamily = Comfortaa
+                                                        fontFamily = selectedFontFamily
                                                     )
 
                                                     IconButton(onClick = { removeUri(e) }) {
@@ -1365,7 +1469,7 @@ fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String
                                                         color = accentColor,
                                                         fontSize = 18.sp,
                                                         softWrap = true,
-                                                        fontFamily = Comfortaa
+                                                        fontFamily = selectedFontFamily
                                                     )
 
                                                     IconButton(onClick = { removeUri(e) }) {
@@ -1407,7 +1511,7 @@ fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String
                                                         color = accentColor,
                                                         fontSize = 24.sp,
                                                         softWrap = true,
-                                                        fontFamily = Comfortaa
+                                                        fontFamily = selectedFontFamily
                                                     )
 
                                                     IconButton(onClick = { removeUri(e) }) {
@@ -1456,7 +1560,7 @@ fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String
                                                     color = accentColor,
                                                     fontSize = 24.sp,
                                                     softWrap = true,
-                                                    fontFamily = Comfortaa
+                                                    fontFamily = selectedFontFamily
                                                 )
                                                 Text(
                                                     c.second.toString(),
@@ -1466,7 +1570,7 @@ fun attachMediaIntent(isOkay: Boolean, removeUrlandContact: (Pair<String, String
                                                     color = accentColor,
                                                     fontSize = 24.sp,
                                                     softWrap = true,
-                                                    fontFamily = Comfortaa
+                                                    fontFamily = selectedFontFamily
                                                 )
                                             }
 
@@ -1719,7 +1823,7 @@ fun filePicker(addMedia:(Uri) -> Unit,color: Color){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Boolean,dismissFun: () -> Unit,onSubmit:( String,String ) ->Unit,fontColor: Color, accentColor: Color){
+fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Boolean,dismissFun: () -> Unit,onSubmit:( String,String ) ->Unit,fontColor: Color, accentColor: Color,selectedFontFamily: FontFamily){
 
     var nameValue by remember {
         mutableStateOf<String>(" ")
@@ -1743,14 +1847,14 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
                     .padding(5.dp)
                     .verticalScroll(state = rememberScrollState(), enabled = true), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
 
-                    Text("Attach $nameTwo :",color= fontColor, fontSize = 24.sp, fontFamily = Comfortaa ,modifier = Modifier.padding(5.dp))
+                    Text("Attach $nameTwo :",color= fontColor, fontSize = 24.sp, fontFamily = selectedFontFamily ,modifier = Modifier.padding(5.dp))
 
                     OutlinedTextField(
                         value = nameValue,
                         singleLine = true,
                         onValueChange = { nameValue = it },
                         textStyle = TextStyle(
-                            fontFamily = Comfortaa,
+                            fontFamily = selectedFontFamily,
                             fontSize = 20.sp,
                             color = fontColor
                         ),
@@ -1758,7 +1862,7 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
                             Text(
                                 nameOne,
                                 color = fontColor,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 fontSize = 18.sp
                             )
                         },
@@ -1779,7 +1883,7 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
                             singleLine = true,
                             onValueChange = { numberValue = it },
                             textStyle = TextStyle(
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 fontSize = 20.sp,
                                 color = fontColor
                             ),
@@ -1787,7 +1891,7 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
                                 Text(
                                     nameTwo,
                                     color = fontColor,
-                                    fontFamily = Comfortaa,
+                                    fontFamily = selectedFontFamily,
                                     fontSize = 18.sp
                                 )
                             },
@@ -1813,7 +1917,7 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
                             singleLine = true,
                             onValueChange = { numberValue = it },
                             textStyle = TextStyle(
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 fontSize = 20.sp,
                                 color = fontColor
                             ),
@@ -1821,7 +1925,7 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
                                 Text(
                                     nameTwo,
                                     color = fontColor,
-                                    fontFamily = Comfortaa,
+                                    fontFamily = selectedFontFamily,
                                     fontSize = 18.sp
                                 )
                             },
@@ -1843,7 +1947,7 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
                     }
 
                     TextButton(onClick = { onSubmit(nameValue,numberValue) }) {
-                        Text("Add",color= accentColor, fontSize = 24.sp, fontFamily = Comfortaa ,modifier = Modifier
+                        Text("Add",color= accentColor, fontSize = 24.sp, fontFamily = selectedFontFamily ,modifier = Modifier
                             .background(
                                 fontColor,
                                 RoundedCornerShape(5.dp)
@@ -1861,53 +1965,87 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
 
 
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun addBackGround(changeBackGround:(Uri) -> Unit,fontColor: Color){
     val context = LocalContext.current
+    val files = context.filesDir.listFiles()
 
-    val pickMedia = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(), onResult = { uri: Uri? ->
-                 if(uri != null){
-                     val imageName =getFileName(uri,context)
-                     val internalDir = context.filesDir
-                     val slectedUri: Uri = uri
-                     val destined = File(internalDir,imageName)
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(Color.Red)){
 
-                     try {
-                         val inputStream: InputStream? = context.contentResolver.openInputStream(slectedUri)
-                         val outputStream: OutputStream = FileOutputStream(destined)
+       FlowRow(modifier = Modifier
+           .verticalScroll(rememberScrollState())){
+        for (i in files!!){
+            IconButton(onClick = {},modifier = Modifier
+                .width(400.dp)
+                .height(400.dp)
+                .padding(2.dp)
+                .clip(RoundedCornerShape(4.dp))) {
+                AsyncImage(
+                    model = i.absolutePath, contentDescription = null, modifier = Modifier
+                        .width(200.dp)
+                        .height(300.dp)
+                )
+            }
+        }
+       }
 
-                         inputStream?.use { input ->
-                             outputStream.use { output ->
-                                 input.copyTo(output, bufferSize = 4 * 1024)
-                             }
-                         }
+    }
 
-                         val updatedUri = Uri.fromFile(File(internalDir,imageName))
-                         changeBackGround(updatedUri)
+        val pickMedia = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia(), onResult = { uri: Uri? ->
+                if (uri != null) {
+                    val imageName = getFileName(uri, context)
+                    val internalDir = context.filesDir
+                    val slectedUri: Uri = uri
+                    val destined = File(internalDir, imageName)
 
-                         Log.e("New Uri","$updatedUri is here")
+                    try {
+                        val inputStream: InputStream? =
+                            context.contentResolver.openInputStream(slectedUri)
+                        val outputStream: OutputStream = FileOutputStream(destined)
 
-                         // At this point, 'destinationFile' contains the copied image in internal storage
-                     } catch (e: Exception) {
-                         // Handle exceptions that may occur during the copy operation
-                         Log.e("New Uri","$e in getting new uri")
+                        inputStream?.use { input ->
+                            outputStream.use { output ->
+                                input.copyTo(output, bufferSize = 4 * 1024)
+                            }
+                        }
 
-                     }
-                 }
-            Log.e("New Uri","what going on $uri")
+                        val updatedUri = Uri.fromFile(File(internalDir, imageName))
+                        changeBackGround(updatedUri)
+
+                        Log.e("New Uri", "$updatedUri is here")
+
+                        // At this point, 'destinationFile' contains the copied image in internal storage
+                    } catch (e: Exception) {
+                        // Handle exceptions that may occur during the copy operation
+                        Log.e("New Uri", "$e in getting new uri")
+
+                    }
+                }
+                Log.e("New Uri", "what going on $uri")
 
 
-            val files = context.filesDir.listFiles()
+                val files = context.filesDir.listFiles()
                 for (file in files) {
                     val fileName = file.name
-                    Log.e("All File","File exist in inter ${file.absoluteFile} ${file.name} ${file}")
+                    Log.e(
+                        "All File",
+                        "File exist in inter ${file.absoluteFile} ${file.name} ${file}"
+                    )
                 }
-        })
+            })
 
-    IconButton(onClick = { pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-        Icon(painterResource(id = R.drawable.attach_background), contentDescription = null, tint = fontColor)
-    } 
+
+        IconButton(onClick = { pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+            Icon(
+                painterResource(id = R.drawable.attach_background),
+                contentDescription = null,
+                tint = fontColor
+            )
+        }
 }
 interface  ApiService{
     @GET
@@ -1961,18 +2099,16 @@ suspend fun getWeather(latitude: Double, longitude: Double):Root?{
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
-fun showWeatherModal(isOkay: Boolean,dismissFun: () -> Unit,data:Root,color:Color,accentColor:Color){
+fun showWeatherModal(isOkay: Boolean,dismissFun: () -> Unit,data:Root,color:Color,accentColor:Color,selectedFontFamily: FontFamily){
 
         if (isOkay) {
-            Dialog(onDismissRequest = {dismissFun()}, properties = DialogProperties(dismissOnBackPress = true,dismissOnClickOutside = true),content = {
-                Card(shape = RoundedCornerShape(10.dp), modifier = Modifier
-                    .width(300.dp)
-                    .height(400.dp)
-                    .padding(8.dp)
-                    .graphicsLayer { transformOrigin = TransformOrigin.Center },
-                    colors = cardColors(accentColor)
+            ModalBottomSheet(
+                onDismissRequest = {dismissFun()},
+                modifier = Modifier.fillMaxHeight(0.5F),
+                containerColor = accentColor
                 ) {
                     Column(modifier = Modifier
                         .fillMaxWidth()
@@ -1984,92 +2120,92 @@ fun showWeatherModal(isOkay: Boolean,dismissFun: () -> Unit,data:Root,color:Colo
                         Text(
                             text = "Location: ${data.location.name}",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa, // Replace with your actual font family
+                            fontFamily = selectedFontFamily, // Replace with your actual font family
                             color = color
                         )
                         Text(
                             text = "Weather: ${data.current.condition.text}",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa, // Replace with your actual font family
+                            fontFamily = selectedFontFamily, // Replace with your actual font family
                             color = color
                         )
                        Text(
                             text = "Temperature: ${data.current.temp_c}°C",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa, // Replace with your actual font family
+                            fontFamily = selectedFontFamily, // Replace with your actual font family
                             color = color
                         )
                         Text(
                             text = "Feel Like: ${data.current.feelslike_c}°C",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa, // Replace with your actual font family
+                            fontFamily = selectedFontFamily, // Replace with your actual font family
                             color = color
                         )
                         Text(
                             text = "Cloud: ${data.current.cloud}%",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa, // Replace with your actual font family
+                            fontFamily = selectedFontFamily, // Replace with your actual font family
                             color = color
                         )
                         Text(
                             text = "US EPA AQI: ${data.current.air_quality.`us-epa-index`}",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa, // Replace with your actual font family
+                            fontFamily = selectedFontFamily, // Replace with your actual font family
                             color = color
                         )
                         Text(
                             text = "GB DEFRA AQI: ${data.current.air_quality.`gb-defra-index`}",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa, // Replace with your actual font family
+                            fontFamily = selectedFontFamily, // Replace with your actual font family
                             color = color
                             )
 
                         Text(
                             text = "Humidity: ${data.current.humidity}%",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa,
+                            fontFamily = selectedFontFamily,
                             color =color
                         )
 
                         Text(
                             text = "UV Index: ${data.current.uv}",
                             fontSize = 18.sp,
-                            fontFamily = Comfortaa,
+                            fontFamily = selectedFontFamily,
                             color =color
                         )
 
                             Text(
                                 text = "Wind Speed (kph): ${data.current.wind_kph}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Wind Degree: ${data.current.wind_degree}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Wind Direction: ${data.current.wind_dir}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Pressure (mb): ${data.current.pressure_mb}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Pressure (in): ${data.current.pressure_in}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
@@ -2077,7 +2213,7 @@ fun showWeatherModal(isOkay: Boolean,dismissFun: () -> Unit,data:Root,color:Colo
                             Text(
                                 text = "Visibility (Miles): ${data.current.vis_miles}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
@@ -2085,56 +2221,55 @@ fun showWeatherModal(isOkay: Boolean,dismissFun: () -> Unit,data:Root,color:Colo
                             Text(
                                 text = "Gust Speed (mph): ${data.current.gust_mph}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Air Quality (CO): ${data.current.air_quality.co}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Air Quality (NO2): ${data.current.air_quality.no2}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Air Quality (O3): ${data.current.air_quality.o3}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Air Quality (SO2): ${data.current.air_quality.so2}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Air Quality (PM2.5): ${data.current.air_quality.pm2_5}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
 
                             Text(
                                 text = "Air Quality (PM10): ${data.current.air_quality.pm10}",
                                 fontSize = 18.sp,
-                                fontFamily = Comfortaa,
+                                fontFamily = selectedFontFamily,
                                 color =color
                             )
                         }
                 }
-            })
-        }
-    }
+            }
+}
 
 @Composable
 fun askPermissionDialog(
@@ -2328,4 +2463,49 @@ fun storagePermissionSnackBar(context: Context) {
 }
 
 
+fun checkLocation(context: Context):Boolean{
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+}
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OfflineAlertDialog(
+    show:Boolean,
+    onCloseDialog: () -> Unit,
+    title:String,
+    text:String,
+    icon:Painter
+) {
+    if (show){
+        AlertDialog(
+            modifier = Modifier.fillMaxWidth(),
+            icon = {
+                Icon(icon, contentDescription = null, modifier = Modifier.fillMaxWidth())
+            },
+            title = {
+                Text(text = title)
+            },
+            text = {
+                Text(
+                    text = text,
+                )
+            },
+            onDismissRequest = {
+               onCloseDialog()
+            },
+            confirmButton = {
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        onCloseDialog()
+                    }
+                ) {
+                    Text("Dismiss")
+                }
+            }
+        )
+    }
+}

@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +38,7 @@ import com.example.nekki.ui.theme.Calendar
 import com.example.nekki.ui.theme.Diary
 import com.example.nekki.ui.theme.Entries
 import com.example.nekki.ui.theme.fontColorList
-
+import com.example.nekki.ui.theme.fontFamilyList
 
 
 enum class CurrentState {
@@ -48,14 +47,6 @@ enum class CurrentState {
     diary
 }
 
-val Comfortaa = FontFamily(
-    Font(R.font.comfortaa_light, FontWeight.Light),
-    Font(R.font.comfortaa_regular, FontWeight.Normal),
-//    Font(R.font.Comfortaa_Medium, FontStyle.Italic),
-    Font(R.font.comfortaa_medium, FontWeight.Medium),
-    Font(R.font.comfortaa_semibold, FontWeight.SemiBold),
-    Font(R.font.comfortaa_bold, FontWeight.Bold)
-)
 
 val SkyBlue = Color(33, 150, 243)
 
@@ -112,7 +103,7 @@ fun MyApp() {
         mutableStateOf(R.drawable.bts)
     }
 
-    val defaultImageUri = Uri.parse("android.resource://${LocalContext.current.packageName}/${R.drawable.bts_2}")
+    val defaultImageUri = Uri.parse("android.resource://${LocalContext.current.packageName}/${R.drawable.cloud}")
     val context = LocalContext.current
 
     val sharedPreferences = remember {
@@ -127,8 +118,16 @@ fun MyApp() {
         editor.putInt("Accentcolor", 1)
     }
 
+    if (!sharedPreferences.contains("Fontfamily")) {
+        editor.putInt("Fontfamily", 0)
+    }
+
     if (!sharedPreferences.contains("Fontcolor")) {
         editor.putInt("Fontcolor", 0)
+    }
+
+    if (!sharedPreferences.contains("Fontsize")) {
+        editor.putInt("Fontsize", 2)
     }
 
     if (!sharedPreferences.contains("BackgroundImage")) {
@@ -138,9 +137,10 @@ fun MyApp() {
 
 
     val fontColor = sharedPreferences.getInt("Fontcolor",0)
+    val fontFamily = sharedPreferences.getInt("Fontfamily",0)
     val accentColor = sharedPreferences.getInt("Accentcolor",1)
     val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.bts.toString())
-
+    val selectedFontFamily = FontFamily(Font(fontFamilyList.get(fontFamily)))
     val selectedFontColor =  fontColorList.get(fontColor)
     val selectedAccentColor =  fontColorList.get(accentColor)
 
@@ -173,7 +173,7 @@ fun MyApp() {
                               style = TextStyle(
                                   if(choosenState == CurrentState.entries) selectedFontColor else selectedAccentColor ,
                                   letterSpacing = 1.sp,
-                                  fontFamily = Comfortaa
+                                  fontFamily = selectedFontFamily
                               ),
                               modifier = Modifier.padding(horizontal = 10.dp)
                           )
@@ -197,7 +197,7 @@ fun MyApp() {
                           style = TextStyle(
                               if(choosenState == CurrentState.calendar) selectedFontColor else selectedAccentColor,
                               letterSpacing = 1.sp,
-                              fontFamily = Comfortaa
+                              fontFamily = selectedFontFamily
                           ),
                           modifier = Modifier.padding(horizontal = 10.dp)
                       )
@@ -206,6 +206,7 @@ fun MyApp() {
                          context = LocalContext.current,
                          selectedFontColor,
                          selectedAccentColor,
+                         selectedFontFamily,
                          choosenState = choosenState,
                          choosenStateFunc = {choosenState = CurrentState.diary},
                      )
@@ -245,7 +246,7 @@ fun MyApp() {
 }
 
 @Composable
-fun NaviDiary(context: Context,selectedFontColor: Color,selectedAccentColor:Color,choosenState: CurrentState,choosenStateFunc: () -> Unit){
+fun NaviDiary(context: Context,selectedFontColor: Color,selectedAccentColor:Color,selectedFontFamily: FontFamily,choosenState: CurrentState,choosenStateFunc: () -> Unit){
    TextButton(
         onClick = { choosenStateFunc() },
        Modifier
@@ -264,7 +265,7 @@ fun NaviDiary(context: Context,selectedFontColor: Color,selectedAccentColor:Colo
             style = TextStyle(
                 if(choosenState == CurrentState.diary) selectedFontColor else selectedAccentColor ,
                 letterSpacing = 1.sp,
-                fontFamily = Comfortaa
+                fontFamily = selectedFontFamily
             ),
             modifier = Modifier.padding(horizontal = 10.dp)
         )
