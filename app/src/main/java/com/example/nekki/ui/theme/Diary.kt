@@ -1,6 +1,5 @@
 package com.example.nekki.ui.theme
 
-
 import Root
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -22,13 +21,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +45,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults.cardColors
@@ -62,6 +57,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -96,7 +92,6 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -117,20 +112,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import retrofit2.http.GET
 import retrofit2.http.Url
 import java.io.BufferedReader
 import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 import java.io.InputStreamReader
-import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
-
+import java.util.UUID
 
 
 @SuppressLint("CoroutineCreationDuringComposition", "SuspiciousIndentation")
@@ -138,15 +130,11 @@ import java.util.Locale
     ExperimentalComposeUiApi::class
 )
 @Composable
-fun Diary(sharedPreferences: SharedPreferences) {
-    val date = Date()
+fun Diary(sharedPreferences: SharedPreferences,formated:String,date: Date) {
     var showEmoji by remember {
         mutableStateOf(false)
     }
 
-
-    val format = SimpleDateFormat("dd/MM/yyyy")
-    var formated = format.format(date)
     val focusKeyboard = LocalFocusManager.current
     var titleText by remember {
         mutableStateOf("")
@@ -171,55 +159,10 @@ fun Diary(sharedPreferences: SharedPreferences) {
 
     val context = LocalContext.current
 
-    val emojiList = listOf<Painter>(
-        painterResource(id = R.drawable.neutral),
-        painterResource(id = R.drawable.good),
-        painterResource(id = R.drawable.verygood),
-        painterResource(id = R.drawable.laugh),
-        painterResource(id = R.drawable.excited),
-        painterResource(id = R.drawable.sick),
-        painterResource(id = R.drawable.confuse),
-        painterResource(id = R.drawable.verybad),
-        painterResource(id = R.drawable.frustrated),
-        painterResource(id = R.drawable.extrem_angry),
-        painterResource(id = R.drawable.color_bts),
-        painterResource(id = R.drawable.color_beating_heart),
-        painterResource(id = R.drawable.cat_grinning),
-        painterResource(id = R.drawable.cat_kissing),
-        painterResource(id = R.drawable.cat_eye_close),
-        painterResource(id = R.drawable.cat_smiling_cat_with_heart_eyes),
-        painterResource(id = R.drawable.cat_weary),
-        painterResource(id = R.drawable.cat_with_tears_of_joy),
-        painterResource(id = R.drawable.cat_with_wry_smile),
-        painterResource(id = R.drawable.cat_pouting),
-        painterResource(id = R.drawable.cat_crying),
-        painterResource(id = R.drawable.color_expressionless_face),
-        painterResource(id = R.drawable.color_smiling_face),
-        painterResource(id = R.drawable.color_smiling_face_with_halo),
-        painterResource(id = R.drawable.color_grinning_face),
-        painterResource(id = R.drawable.color_beaming_face_with_smiling_eyes),
-        painterResource(id = R.drawable.color_face_blowing_a_kiss),
-        painterResource(id = R.drawable.color_kissing_face_with_closed_eyes),
-        painterResource(id = R.drawable.color_face_with_tears_of_joy),
-        painterResource(id = R.drawable.color_astonished_face),
-        painterResource(id = R.drawable.color_drooling_face),
-        painterResource(id = R.drawable.color_sleeping_face),
-        painterResource(id = R.drawable.color_face_screaming_in_fear),
-        painterResource(id = R.drawable.color_cold_face),
-        painterResource(id = R.drawable.color_hot_face),
-        painterResource(id = R.drawable.color_anxious_face_with_sweat),
-        painterResource(id = R.drawable.color_face_with_thermometer),
-        painterResource(id = R.drawable.color_face_vomiting),
-        painterResource(id = R.drawable.color_confused_face),
-        painterResource(id = R.drawable.color_crying_face),
-        painterResource(id = R.drawable.color_face_exhaling),
-        painterResource(id = R.drawable.color_angry_face),
-        painterResource(id = R.drawable.color_loudly_crying_face),
-    )
 
 
 
-    val emojiListCache = LruCache<String,List<Painter>>(4*1024*1024)
+    val emojiListCache = LruCache<String,List<Int>>(4*1024*1024)
     emojiListCache.put("emojiListCache",emojiList)
 
     val colorListCache = LruCache<String,List<Color>>(4*1024*1024)
@@ -232,7 +175,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
     val fontFamily = sharedPreferences.getInt("Fontfamily",0)
     val fontSize = sharedPreferences.getInt("Fontsize",2)
     val accentColor = sharedPreferences.getInt("Accentcolor",1)
-    val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.bts.toString())
+    val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.cloud.toString())
 
     var selectedFontColor by remember {
         mutableStateOf(fontColorList.get(fontColor))
@@ -250,11 +193,6 @@ fun Diary(sharedPreferences: SharedPreferences) {
         mutableStateOf<FontFamily>(FontFamily(Font((fontFamilyList.get(fontFamily)))))
     }
 
-
-    var updateBackGroundImage by remember {
-        mutableStateOf<Uri>(Uri.parse(backGroundImage))
-    }
-
     var fontcolorBoolean by remember {
         mutableStateOf(false)
     }
@@ -268,21 +206,14 @@ fun Diary(sharedPreferences: SharedPreferences) {
     }
 
 
-    AnimatedVisibility(
-        visible = showEmoji,
-        enter = scaleIn() + expandVertically(expandFrom = Alignment.CenterVertically),
-        exit = scaleOut() + shrinkVertically(shrinkTowards = Alignment.CenterVertically)
-    ) {
+
         emojiModal(
             isOkay = showEmoji,
             onEmojiClick = { clickedIndex -> emojiId = clickedIndex;showEmoji = false },
             function = { showEmoji = false },
-            emojiListCache,
-            emojiList,
             selectedFontColor,
             selectedAccentColor
         )
-    }
 
         if(fontcolorBoolean){
             BackHandler {
@@ -330,29 +261,28 @@ fun Diary(sharedPreferences: SharedPreferences) {
         )
 
 
-
     var checkInternet by remember {
         mutableStateOf(true)
     }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            val isConnected = checkcInternetStatus(context)
-            checkInternet = isConnected
-            delay(5000)
-        }
-    }
+//    LaunchedEffect(Unit) {
+//        while (true) {
+//            val isConnected = checkcInternetStatus(context)
+//            checkInternet = isConnected
+//            delay(5000)
+//        }
+//    }
 
     var isLocation by remember {
         mutableStateOf(true)
     }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            isLocation = checkLocation(context)
-            delay(6000)
-        }
-    }
+//    LaunchedEffect(Unit) {
+//        while (true) {
+//            isLocation = checkLocation(context)
+//            delay(6000)
+//        }
+//    }
 
     var showLocationOff by remember { mutableStateOf(false) }
 
@@ -394,7 +324,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
         );showContactAndUrl2 = false},selectedFontColor,selectedAccentColor,selectedFontFamily)
     }
 
-    if(showImage){
+
         attachMediaIntent(isOkay = showImage,
             showContactModal = {showContactAndUrl = true},
             showUrlModalFun = {showContactAndUrl2 = true},
@@ -405,7 +335,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
                 imageUriList = imageUriList + a }, dismissFun = {showImage = false},
             accentColor = selectedAccentColor,color = selectedFontColor,
             imageUriList = imageUriList, contactandUrlList = contactsAndUrlList, selectedFontFamily = selectedFontFamily)
-    }
+
 
     if(showImage){
         BackHandler(true) {
@@ -413,7 +343,19 @@ fun Diary(sharedPreferences: SharedPreferences) {
         }
     }
 
+    var imageUpdate by remember {
+        mutableStateOf(false)
+    }
 
+    var  showBackground by remember { mutableStateOf(false) }
+    selectBackground(isOkay = showBackground,sharedPreferences, setFalse = {showBackground = false},accentColor = selectedAccentColor,fontColor = selectedFontColor)
+
+    if(showBackground){
+        BackHandler(true) {
+            showBackground = false
+        }
+    }
+    
     val keyboardController = LocalSoftwareKeyboardController.current
     var isContentFieldActive by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
@@ -453,7 +395,6 @@ fun Diary(sharedPreferences: SharedPreferences) {
         )
     }
 
-    var  showBackground by remember { mutableStateOf(false) }
 
     val locationPermission = ContextCompat.checkSelfPermission(LocalContext.current,android.Manifest.permission.ACCESS_FINE_LOCATION)
     val storagePermission = ContextCompat.checkSelfPermission(LocalContext.current,android.Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -534,29 +475,22 @@ fun Diary(sharedPreferences: SharedPreferences) {
         }
     }
 
+    var saveDiary by remember {
+        mutableStateOf(false)
+    }
 
     Box(modifier = Modifier
-        .then(
-            if (isContentFieldActive) {
-                Modifier.padding(0.dp)
-            } else Modifier.padding(10.dp)
-        )
+        .padding(0.dp)
         .fillMaxSize()) {
 
+        if(showImage){
+            Log.e("Change","Success")
+            BackgroundComponent(sharedPreferences = sharedPreferences)
+        }else{
+            Log.e("Change","Failed")
+            BackgroundComponent(sharedPreferences = sharedPreferences)
+        }
 
-        AsyncImage(
-            updateBackGroundImage,
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth()
-                .then(
-                    if (isContentFieldActive) {
-                        Modifier.clip(RoundedCornerShape(0.dp))
-                    } else Modifier.clip(RoundedCornerShape(8.dp))
-                ),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-        )
         Column(
             Modifier
                 .fillMaxWidth()
@@ -572,8 +506,8 @@ fun Diary(sharedPreferences: SharedPreferences) {
             if(!isContentFieldActive) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 5.dp, vertical = 5.dp)){
-                Text(text = formated, fontFamily = selectedFontFamily, fontSize = 24.sp, color = selectedFontColor)
+                .padding(horizontal = 18.dp, vertical = 2.dp)){
+                Text(text = formated, fontFamily = selectedFontFamily, fontSize = 20.sp, color = selectedFontColor)
                 if(weatherData != null){
                     Text("${weatherData!!.current.temp_c}°C/${weatherData!!.current.condition.text} ", fontFamily = selectedFontFamily,color = selectedFontColor, fontSize = 18.sp)
                 }else{
@@ -585,33 +519,30 @@ fun Diary(sharedPreferences: SharedPreferences) {
                     value = titleText,
                     singleLine = true,
                     onValueChange = { titleText = it },
-//                colors =
                     textStyle = TextStyle(
                         fontSize = selectedFontSize.sp,
                         fontFamily = selectedFontFamily,
                         color = selectedFontColor,
                         lineHeight = 0.sp
-
                     ),
-//                place
                     placeholder = {
                         Text(
                             "Title...",
                             color = selectedFontColor,
                             fontFamily = selectedFontFamily,
                             fontSize = selectedFontSize.sp,
+                            lineHeight = 0.sp
                         )
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions( onDone = { focusKeyboard.clearFocus() }),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 5.dp)
-                    ,
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        .padding(horizontal = 2.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        cursorColor = selectedFontColor,
                         focusedBorderColor = Color.Unspecified,
                         unfocusedBorderColor = Color.Unspecified,
-                        cursorColor = selectedFontColor
                     )
                 )
             }
@@ -646,15 +577,15 @@ fun Diary(sharedPreferences: SharedPreferences) {
                     .then(
                         if (isContentFieldActive) {
                             Modifier.padding(0.dp)
-                        } else Modifier.padding(2.dp)
+                        } else Modifier.padding(0.dp)
                     )
                     .focusRequester(focusRequester)
                     .onFocusChanged { focusState -> isContentFieldActive = focusState.isFocused },
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = Color.Unspecified,
-                    unfocusedBorderColor = Color.Unspecified,
-                    cursorColor = selectedFontColor
-                )
+                    colors = OutlinedTextFieldDefaults.colors(
+                        cursorColor = selectedFontColor,
+                        focusedBorderColor = Color.Unspecified,
+                        unfocusedBorderColor = Color.Unspecified,
+                    )
             )
 
 
@@ -664,7 +595,9 @@ fun Diary(sharedPreferences: SharedPreferences) {
                 .horizontalScroll(
                     rememberScrollState()
                 )) {
-                IconButton(onClick = { }) {
+                IconButton(onClick = {
+                    saveDiary =  true
+                }) {
                     Icon(
                         painterResource(id = R.drawable.save),
                         contentDescription = null,
@@ -672,6 +605,49 @@ fun Diary(sharedPreferences: SharedPreferences) {
                     )
                 }
 
+                if(saveDiary)
+                {   final(
+                    time = date.toString(),
+                    title = titleText.ifEmpty { "No Title" },
+                    content = contentText.ifEmpty { "Empty" },
+                    emojiIndex = emojiId.toString(),
+                    weatherEmoji = weatherData?.current?.condition?.icon ?: "N/A",
+                    location = weatherData?.location?.name ?: "N/A",
+                    weather = weatherData?.current?.condition?.text ?: "N/A",
+                    temp = weatherData?.current?.temp_c?.toString() ?: "N/A",
+                    feelLike = weatherData?.current?.feelslike_c?.toString() ?: "N/A",
+                    cloud = weatherData?.current?.cloud?.toString() ?: "N/A",
+                    usEpaAqi = weatherData?.current?.air_quality?.`us-epa-index`?.toString()
+                        ?: "N/A",
+                    gbAqi = weatherData?.current?.air_quality?.`gb-defra-index`?.toString()
+                        ?: "N/A",
+                    humidity = weatherData?.current?.humidity?.toString() ?: "N/A",
+                    uvIndex = weatherData?.current?.uv?.toString() ?: "N/A",
+                    windSpeed = weatherData?.current?.wind_kph?.toString() ?: "N/A",
+                    windDegree = weatherData?.current?.wind_degree?.toString() ?: "N/A",
+                    windDir = weatherData?.current?.wind_dir ?: "N/A",
+                    pressureMB = weatherData?.current?.pressure_mb?.toString() ?: "N/A",
+                    pressureIN = weatherData?.current?.pressure_in?.toString() ?: "N/A",
+                    visiblityMILES = weatherData?.current?.vis_miles?.toString() ?: "N/A",
+                    gustSpeed = weatherData?.current?.gust_mph?.toString() ?: "N/A",
+                    aqCO = weatherData?.current?.air_quality?.co?.toString() ?: "N/A",
+                    aqNO2 = weatherData?.current?.air_quality?.no2?.toString() ?: "N/A",
+                    aqO3 = weatherData?.current?.air_quality?.o3?.toString() ?: "N/A",
+                    aqSO2 = weatherData?.current?.air_quality?.so2?.toString() ?: "N/A",
+                    aqPMtwo = weatherData?.current?.air_quality?.pm2_5?.toString() ?: "N/A",
+                    aqPMten = weatherData?.current?.air_quality?.pm10?.toString() ?: "N/A",
+                    latitude = latitudeDiary.toString(),
+                    longitude = longitudeDiary.toString(),
+                    fontColor = selectedFontColor.toString(),
+                    accentColor = selectedAccentColor.toString(),
+                    fontSize = fontSize.toString(),
+                    fontStyle = selectedFontFamily.toString() ,
+                    backgroundImage = backGroundImage.toString(),
+                    listofAttachedImages = imageUriList,
+                    contactandUrlList = contactsAndUrlList,
+                    favourite = false.toString()
+                )
+            }
                 if(weatherData != null) {
                    val a = "https:" + weatherData!!.current.condition.icon
                     Log.e("Image Code","Getting Image $a and ${weatherData!!.current.condition.icon}")
@@ -701,7 +677,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
 
 
                 IconButton(onClick = { showEmoji = !showEmoji }) {
-                    showChoosenEmoji(emojiId = emojiId, emojiList = emojiList, selectedFontColor)
+                    showChoosenEmoji(emojiId = emojiId, selectedFontColor)
                 }
 
               if(locationPermission == PackageManager.PERMISSION_DENIED) {
@@ -779,7 +755,7 @@ fun Diary(sharedPreferences: SharedPreferences) {
 
 
 
-                IconButton(onClick = { showBackground = !showBackground}) {
+                IconButton(onClick = { showBackground = true}) {
                     Icon(
                         painterResource(id = R.drawable.attach_background),
                         contentDescription = null,
@@ -850,116 +826,49 @@ fun Diary(sharedPreferences: SharedPreferences) {
                 storagePermissionDialogBoolean = false
             }
         }
+    }
+}
 
-        if(showBackground){
-            addBackGround(changeBackGround = {uri ->
-                val editor = sharedPreferences.edit();
-                editor.putString("BackgroundImage",uri.toString())
-                Log.e("Uri","New Back Ground image $uri")
-                editor.apply()
-
-                updateBackGroundImage = uri
-            },selectedFontColor)
+@SuppressLint("RememberReturnType", "SuspiciousIndentation")
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun emojiModal(
+    isOkay: Boolean,
+    onEmojiClick: (Int) -> Unit,
+    function: () -> Unit,
+    fontColor: Color,
+    accentColor: Color
+) {
+    if (isOkay) {
+        ModalBottomSheet(
+            onDismissRequest = { function() },
+            modifier = Modifier.fillMaxHeight(0.8f).graphicsLayer {  },
+            containerColor = accentColor
+        ) {
+            FlowRow(modifier = Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.SpaceAround){
+                for (i in 0 until 43){
+//                    IconButton(onClick = { onEmojiClick(i) }) {
+                        AsyncImage(
+                            model = emojiList[i], contentDescription = null, modifier = Modifier
+                                .width(48.dp)
+                                .height(48.dp)
+                        )
+//                    }
+                }
+            }
         }
     }
 }
 
 
-@SuppressLint("RememberReturnType", "SuspiciousIndentation")
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun emojiModal(isOkay: Boolean, onEmojiClick: (Int) -> Unit, function: () -> Unit, cache: LruCache<String,List<Painter>>,emojiList: List<Painter> ,fontColor: Color, accentColor: Color){
-
-        val getEmojiListCache = cache.get("emojiListCache")
-        if (isOkay) {
-                    ModalBottomSheet(
-                        onDismissRequest = {function()},
-                        modifier = Modifier.fillMaxHeight(0.7F),
-                        containerColor = accentColor
-                    ) {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-//                    .background(Color.Red)
-                                .padding(start = 5.dp, bottom = 5.dp, top = 5.dp, end = 5.dp),
-                        ) {
-                            if(getEmojiListCache != null) {
-                                val first10 = getEmojiListCache.take(10)
-
-                                for ((index, i) in first10.withIndex()) {
-                                    IconButton(
-                                        onClick = { onEmojiClick(index) }, modifier = Modifier
-                                            .padding(vertical = 4.dp)
-                                    ) {
-                                        Icon(
-                                            i,
-                                            contentDescription = null,
-                                            tint = fontColor,
-                                            modifier = Modifier.size(48.dp)
-                                        )
-                                    }
-                                    }
-
-                                    Text("\uD83C\uDF1F Upgrade to Premium for Color Emojis! \uD83C\uDF1F", textAlign = TextAlign.Center,modifier = Modifier.fillMaxWidth())
-
-                                    for((index,i) in getEmojiListCache.withIndex()){
-                                        if(index > 10) {
-                                            IconButton(
-                                                onClick = { onEmojiClick(index) },
-                                                modifier = Modifier
-                                                    .padding(vertical = 4.dp)
-                                            ) {
-                                                Icon(
-                                                    i,
-                                                    contentDescription = null,
-                                                    tint = Color.Unspecified,
-                                                    modifier = Modifier.size(48.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            else{
-                                for ((index, i) in emojiList.withIndex()) {
-                                    IconButton(
-                                        onClick = { onEmojiClick(index) }, modifier = Modifier
-                                            .padding(vertical = 4.dp)
-                                    ) {
-                                        if (index < 10) {
-                                            Icon(
-                                                i,
-                                                contentDescription = null,
-                                                tint = fontColor,
-                                                modifier = Modifier.size(48.dp)
-                                            )
-                                        } else {
-                                            Icon(
-                                                i,
-                                                contentDescription = null,
-                                                tint = Color.Unspecified,
-                                                modifier = Modifier.size(48.dp)
-                                            )
-                                        }
-                                    }
-                                }
-
-                            }
-                        }
-                    }
-
-                }
-}
-
-@Composable
-fun showChoosenEmoji(emojiId: Int,emojiList: List<Painter>,color: Color){
+fun showChoosenEmoji(emojiId: Int, color: Color){
     for ((index,i) in emojiList.withIndex()){
         if(emojiId == index){
             if(emojiId < 10){
-                Icon(i, contentDescription = null,tint = color)
+                Icon(painterResource(id = i), contentDescription = null,tint = color)
             }else{
-                Icon(i, contentDescription = null,tint = Color.Unspecified)
+                Icon(painterResource(id = i) , contentDescription = null,tint = Color.Unspecified)
             }
 
         }
@@ -1164,18 +1073,6 @@ fun grantPermissionSnackBar(context: Context) {
             }
         }
     }
-}
-
-fun timestampChange(timeStamp: Long):String{
-    try{
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val date = Date(timeStamp * 1000L)
-        return sdf.format(date)
-    }
-    catch (e:Exception){
-        e.printStackTrace()
-    }
-    return ""
 }
 
 @SuppressLint("SuspiciousIndentation")
@@ -1963,90 +1860,6 @@ fun showContactModal(nameOne:String,nameTwo:String,keyboard:Boolean,isOkay: Bool
 }
 
 
-
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
-@Composable
-fun addBackGround(changeBackGround:(Uri) -> Unit,fontColor: Color){
-    val context = LocalContext.current
-    val files = context.filesDir.listFiles()
-
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(Color.Red)){
-
-       FlowRow(modifier = Modifier
-           .verticalScroll(rememberScrollState())){
-        for (i in files!!){
-            IconButton(onClick = {},modifier = Modifier
-                .width(400.dp)
-                .height(400.dp)
-                .padding(2.dp)
-                .clip(RoundedCornerShape(4.dp))) {
-                AsyncImage(
-                    model = i.absolutePath, contentDescription = null, modifier = Modifier
-                        .width(200.dp)
-                        .height(300.dp)
-                )
-            }
-        }
-       }
-
-    }
-
-        val pickMedia = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.PickVisualMedia(), onResult = { uri: Uri? ->
-                if (uri != null) {
-                    val imageName = getFileName(uri, context)
-                    val internalDir = context.filesDir
-                    val slectedUri: Uri = uri
-                    val destined = File(internalDir, imageName)
-
-                    try {
-                        val inputStream: InputStream? =
-                            context.contentResolver.openInputStream(slectedUri)
-                        val outputStream: OutputStream = FileOutputStream(destined)
-
-                        inputStream?.use { input ->
-                            outputStream.use { output ->
-                                input.copyTo(output, bufferSize = 4 * 1024)
-                            }
-                        }
-
-                        val updatedUri = Uri.fromFile(File(internalDir, imageName))
-                        changeBackGround(updatedUri)
-
-                        Log.e("New Uri", "$updatedUri is here")
-
-                        // At this point, 'destinationFile' contains the copied image in internal storage
-                    } catch (e: Exception) {
-                        // Handle exceptions that may occur during the copy operation
-                        Log.e("New Uri", "$e in getting new uri")
-
-                    }
-                }
-                Log.e("New Uri", "what going on $uri")
-
-
-                val files = context.filesDir.listFiles()
-                for (file in files) {
-                    val fileName = file.name
-                    Log.e(
-                        "All File",
-                        "File exist in inter ${file.absoluteFile} ${file.name} ${file}"
-                    )
-                }
-            })
-
-
-        IconButton(onClick = { pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-            Icon(
-                painterResource(id = R.drawable.attach_background),
-                contentDescription = null,
-                tint = fontColor
-            )
-        }
-}
 interface  ApiService{
     @GET
     suspend fun fetchWeather(
@@ -2509,3 +2322,324 @@ fun OfflineAlertDialog(
         )
     }
 }
+
+@Composable
+fun selectBackground(isOkay: Boolean, sharedPreferences: SharedPreferences, setFalse: () -> Unit,accentColor :Color,fontColor: Color) {
+    if (isOkay) {
+        val context = LocalContext.current
+        val folderName = "backgroundImages"
+        val folderDir = File(context.filesDir, folderName)
+        var success by remember {
+            mutableStateOf(false)
+        }
+
+        var onDelete by remember {
+            mutableStateOf(false)
+        }
+
+
+        var listUpdate by remember {
+            mutableStateOf(false)
+        }
+
+        var deleteFile by remember {
+            mutableStateOf<File?>(null)
+        }
+
+        val imageFiles = if(listUpdate){
+            folderDir.listFiles()?.toList() ?: emptyList()
+        }else{
+            folderDir.listFiles()?.toList() ?: emptyList()
+        }
+
+        val pickMedia = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia(),
+            onResult = { uri ->
+                if (uri != null) {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    inputStream?.use { input ->
+                        val fileName = "image_${System.currentTimeMillis()}.jpg"
+                        val targetFile = File(folderDir, fileName)
+                        targetFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                        val editor = sharedPreferences.edit()
+                        editor.putString("BackgroundImage", targetFile.absolutePath)
+                        editor.apply()
+                        listUpdate = !listUpdate
+                    }
+                }
+            }
+        )
+
+        if (folderDir.exists() && folderDir.isDirectory) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    for (f in imageFiles) {
+                        val imagePath = f.absolutePath
+                        Card(
+                            shape = RoundedCornerShape(8.dp), modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(color = accentColor)
+                            ) {
+                                IconButton(onClick = {
+                                    deleteFile = f
+                                    onDelete = true;
+                                    listUpdate = !listUpdate
+                                }) {
+                                    Icon(Icons.Rounded.Delete, contentDescription = null,tint = fontColor)
+                                }
+                                IconButton(onClick = {
+                                    val editor = sharedPreferences.edit()
+                                    editor.putString("BackgroundImage", imagePath)
+                                    editor.apply()
+                                   setFalse()
+                                }) {
+                                    Icon(Icons.Rounded.Check, contentDescription = null,tint = fontColor)
+                                }
+                            }
+                            AsyncImage(model = imagePath, contentDescription = null)
+                        }
+                    }
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                ) {
+                    FloatingActionButton(modifier = Modifier.padding(horizontal = 8.dp), containerColor = accentColor, onClick = {
+                        setFalse()
+                    }) {
+                        Icon(
+                            Icons.Rounded.ArrowBack,
+                            contentDescription = null,tint = fontColor
+                        )
+                    }
+
+
+                    FloatingActionButton(onClick = {
+                        pickMedia.launch(PickVisualMediaRequest(mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        listUpdate = !listUpdate
+                    }, containerColor = accentColor) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.attach_background),
+                            contentDescription = null,tint = fontColor
+                        )
+                    }
+                }
+
+                DeleteConfirmationDialog(showDialog = onDelete, onConfirm = {
+                    deleteFile?.delete()
+                    listUpdate = !listUpdate
+                    onDelete = false
+                }, onDismiss = {onDelete = false})
+            }
+        }
+    }
+}
+
+
+@Composable
+fun BackgroundComponent(sharedPreferences: SharedPreferences) {
+
+    val context = LocalContext.current
+    val folderName = "backgroundImages"
+    val folderDir = File(context.filesDir, folderName)
+
+    var backGroundImage by remember {
+             mutableStateOf("")
+        }
+
+    val defaultImageUri = Uri.parse("android.resource://${LocalContext.current.packageName}/${R.drawable.cloud}")
+
+    backGroundImage = sharedPreferences.getString("BackgroundImage",defaultImageUri.toString()).toString()
+
+    val listofImg = folderDir.listFiles()
+
+    var finit by remember {
+         mutableStateOf(false)
+    }
+
+    for(i in listofImg){
+        if(i.absolutePath == backGroundImage){
+            Log.e("True","Findi it ")
+            finit = true
+            break
+        }
+    }
+
+    if(!finit){
+        backGroundImage = defaultImageUri.toString()
+    }
+
+    AsyncImage(
+            Uri.parse(backGroundImage),
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+        )
+}
+
+@Composable
+fun DeleteConfirmationDialog(
+    showDialog: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { onDismiss() },
+            title = { Text(text = "Delete Confirmation") },
+            text = {
+                Column {
+                    Text("Are you sure you want to delete this Background Image?")
+                    Text("Note: The entry attached with this Background Image will no longer use this Image and will be replaced with the default image.")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onConfirm()
+                        onDismiss()
+                    }
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { onDismiss() }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+
+@Composable
+fun final(
+    favourite: String,
+    time: String,
+    title: String,
+    content: String,
+    emojiIndex: String,
+    weatherEmoji: String,
+    location: String,
+    weather: String,
+    temp: String,
+    feelLike: String,
+    cloud: String,
+    usEpaAqi: String,
+    gbAqi: String,
+    humidity: String,
+    uvIndex: String,
+    windSpeed: String,
+    windDegree: String,
+    windDir: String,
+    pressureMB: String,
+    pressureIN: String,
+    visiblityMILES: String,
+    gustSpeed: String,
+    aqCO: String,
+    aqNO2: String,
+    aqO3: String,
+    aqSO2: String,
+    aqPMtwo: String,
+    aqPMten: String,
+    latitude: String,
+    longitude: String,
+    fontColor: String,
+    accentColor: String,
+    fontSize: String,
+    fontStyle: String,
+    backgroundImage: String,
+    listofAttachedImages: List<Uri>,
+    contactandUrlList: List<Pair<String, String>>
+) {
+    val jsonObject = JSONObject()
+
+    val context = LocalContext.current
+
+    jsonObject.put("time", time)
+    jsonObject.put("title", title)
+    jsonObject.put("content", content)
+    jsonObject.put("emojiIndex", emojiIndex)
+    jsonObject.put("weatherEmoji", weatherEmoji)
+    jsonObject.put("location", location)
+    jsonObject.put("weather", weather)
+    jsonObject.put("temp", temp)
+    jsonObject.put("feelLike", feelLike)
+    jsonObject.put("cloud", cloud)
+    jsonObject.put("usEpaAqi", usEpaAqi)
+    jsonObject.put("gbAqi", gbAqi)
+    jsonObject.put("humidity", humidity)
+    jsonObject.put("uvIndex", uvIndex)
+    jsonObject.put("windSpeed", windSpeed)
+    jsonObject.put("windDegree", windDegree)
+    jsonObject.put("windDir", windDir)
+    jsonObject.put("pressureMB", pressureMB)
+    jsonObject.put("pressureIN", pressureIN)
+    jsonObject.put("visiblityMILES", visiblityMILES)
+    jsonObject.put("gustSpeed", gustSpeed)
+    jsonObject.put("aqCO", aqCO)
+    jsonObject.put("aqNO2", aqNO2)
+    jsonObject.put("aqO3", aqO3)
+    jsonObject.put("aqSO2", aqSO2)
+    jsonObject.put("aqPMtwo", aqPMtwo)
+    jsonObject.put("aqPMten", aqPMten)
+    jsonObject.put("latitude", latitude)
+    jsonObject.put("longitude", longitude)
+    jsonObject.put("fontColor", fontColor)
+    jsonObject.put("accentColor", accentColor)
+    jsonObject.put("fontSize", fontSize)
+    jsonObject.put("fontStyle", fontStyle)
+    jsonObject.put("backgroundImage", backgroundImage)
+    jsonObject.put("favourite",favourite)
+    val imagesArray = JSONArray()
+    listofAttachedImages.forEach {
+        imagesArray.put(it.toString())
+    }
+    jsonObject.put("listofAttachedImages", imagesArray)
+
+    val contactAndUrlArray = JSONArray()
+    contactandUrlList.forEach { pair ->
+        val contactUrlObject = JSONObject()
+        contactUrlObject.put("name", pair.first)
+        contactUrlObject.put("url", pair.second)
+        contactAndUrlArray.put(contactUrlObject)
+    }
+    jsonObject.put("contactandUrlList", contactAndUrlArray)
+
+    val jsonString = jsonObject.toString()
+
+    val filename = "${System.currentTimeMillis()}${UUID.randomUUID()}"
+
+    val entriesFolder = File(context.filesDir, "entries")
+
+    if (!entriesFolder.exists()) {
+        entriesFolder.mkdirs()
+    }
+
+    val internalStoragePath = File(entriesFolder, filename)
+
+    internalStoragePath.writeText(jsonString)
+
+    Log.e("Final", "Done is submitted $jsonString filename $filename")
+
+}
+

@@ -6,12 +6,9 @@ import com.example.nekki.R
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
-
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
-
-
 val SkyBlue = Color(33, 150, 243)
 
 val fontColorList = listOf<Color>(
@@ -102,4 +99,65 @@ val fontFamilyList = listOf<Int>(
     R.font.poppins_regular,
     R.font.mohave_regular,
     R.font.tiltneon_regular
+)
+
+
+val defaultWallpaper = arrayOf(
+    R.drawable.cloud,
+    R.drawable.wallpaper_one,
+    R.drawable.wallpaper_two,
+    R.drawable.wallpaper_three,
+    R.drawable.wallpaper_four,
+    R.drawable.wallpaper_nine,
+    R.drawable.wallpaper_ten,
+    R.drawable.wallpaper_eleven,
+    R.drawable.wallpaper_twelve,
+    R.drawable.wallpaper_thireen,
+    R.drawable.wallpaper_fourteen
+)
+
+val emojiList = listOf<Int>(
+    (R.drawable.neutral),
+    (R.drawable.good),
+    (R.drawable.verygood),
+    (R.drawable.laugh),
+    (R.drawable.excited),
+    (R.drawable.sick),
+    (R.drawable.confuse),
+    (R.drawable.verybad),
+    (R.drawable.frustrated),
+    (R.drawable.extrem_angry),
+    (R.drawable.color_bts),
+    (R.drawable.color_beating_heart),
+    (R.drawable.cat_grinning),
+    (R.drawable.cat_kissing),
+    (R.drawable.cat_eye_close),
+    (R.drawable.cat_smiling_cat_with_heart_eyes),
+    (R.drawable.cat_weary),
+    (R.drawable.cat_with_tears_of_joy),
+    (R.drawable.cat_with_wry_smile),
+    (R.drawable.cat_pouting),
+    (R.drawable.cat_crying),
+    (R.drawable.color_expressionless_face),
+    (R.drawable.color_smiling_face),
+    (R.drawable.color_smiling_face_with_halo),
+    (R.drawable.color_grinning_face),
+    (R.drawable.color_beaming_face_with_smiling_eyes),
+    (R.drawable.color_face_blowing_a_kiss),
+    (R.drawable.color_kissing_face_with_closed_eyes),
+    (R.drawable.color_face_with_tears_of_joy),
+    (R.drawable.color_astonished_face),
+    (R.drawable.color_drooling_face),
+    (R.drawable.color_sleeping_face),
+    (R.drawable.color_face_screaming_in_fear),
+    (R.drawable.color_cold_face),
+    (R.drawable.color_hot_face),
+    (R.drawable.color_anxious_face_with_sweat),
+    (R.drawable.color_face_with_thermometer),
+    (R.drawable.color_face_vomiting),
+    (R.drawable.color_confused_face),
+    (R.drawable.color_crying_face),
+    (R.drawable.color_face_exhaling),
+    (R.drawable.color_angry_face),
+    (R.drawable.color_loudly_crying_face),
 )

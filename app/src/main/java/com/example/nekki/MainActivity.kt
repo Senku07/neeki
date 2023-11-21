@@ -1,5 +1,6 @@
 package com.example.nekki
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,8 +37,14 @@ import androidx.compose.ui.unit.sp
 import com.example.nekki.ui.theme.Calendar
 import com.example.nekki.ui.theme.Diary
 import com.example.nekki.ui.theme.Entries
+import com.example.nekki.ui.theme.defaultWallpaper
 import com.example.nekki.ui.theme.fontColorList
 import com.example.nekki.ui.theme.fontFamilyList
+import java.io.File
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.UUID
 
 
 enum class CurrentState {
@@ -46,9 +52,6 @@ enum class CurrentState {
     calendar,
     diary
 }
-
-
-val SkyBlue = Color(33, 150, 243)
 
 class MainActivity : ComponentActivity() {
 
@@ -84,23 +87,12 @@ fun CustomScaffold(
 
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("CoroutineCreationDuringComposition")
 @Preview
 @Composable
 fun MyApp() {
     var choosenState by remember {
         mutableStateOf(CurrentState.entries)
-    }
-
-    var latitude by remember {
-        mutableStateOf(0.0)
-    }
-    var longitude by remember {
-        mutableStateOf(0.0)
-    }
-
-    var globalBackgroundImage by remember {
-        mutableStateOf(R.drawable.bts)
     }
 
     val defaultImageUri = Uri.parse("android.resource://${LocalContext.current.packageName}/${R.drawable.cloud}")
@@ -130,6 +122,33 @@ fun MyApp() {
         editor.putInt("Fontsize", 2)
     }
 
+    val isFirstRunKey = "is_first_run"
+    val isFirstRun = sharedPreferences.getBoolean(isFirstRunKey, true)
+
+    if (isFirstRun) {
+        val folderName = "backgroundImages"
+        val folderDir = File(context.filesDir, folderName)
+        if (!folderDir.exists()) {
+            folderDir.mkdirs()
+        }
+
+        for (resourceId in defaultWallpaper) {
+            val inputStream = context.resources.openRawResource(resourceId)
+            val filename = "${System.currentTimeMillis()}${UUID.randomUUID()}"
+            val imageFile = File(folderDir, filename)
+            val outputStream = FileOutputStream(imageFile)
+            inputStream.copyTo(outputStream)
+            inputStream.close()
+            outputStream.close()
+        }
+
+        val editor = sharedPreferences.edit()
+        editor.putBoolean(isFirstRunKey, false)
+        editor.apply()
+    }
+
+
+
     if (!sharedPreferences.contains("BackgroundImage")) {
         editor.putString("BackgroundImage", defaultImageUri.toString())
     }
@@ -139,7 +158,7 @@ fun MyApp() {
     val fontColor = sharedPreferences.getInt("Fontcolor",0)
     val fontFamily = sharedPreferences.getInt("Fontfamily",0)
     val accentColor = sharedPreferences.getInt("Accentcolor",1)
-    val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.bts.toString())
+    val backGroundImage = sharedPreferences.getString("BackgroundImage",R.drawable.cloud.toString())
     val selectedFontFamily = FontFamily(Font(fontFamilyList.get(fontFamily)))
     val selectedFontColor =  fontColorList.get(fontColor)
     val selectedAccentColor =  fontColorList.get(accentColor)
@@ -224,7 +243,7 @@ fun MyApp() {
                Column {
                    if(choosenState == CurrentState.entries)
                    {
-                       Entries()
+                       Entries(sharedPreferences)
                    }
                    else if(choosenState == CurrentState.calendar)
                    {
@@ -234,7 +253,10 @@ fun MyApp() {
                        }
                    }
                    else if(choosenState == CurrentState.diary){
-                       Diary(sharedPreferences)
+                       val date = Date()
+                       val format = SimpleDateFormat("dd MMM HH:mm")
+                       var formated = format.format(date)
+                       Diary(sharedPreferences,formated,date)
                        BackHandler(true){
                            choosenState = CurrentState.entries
                        }
@@ -248,7 +270,9 @@ fun MyApp() {
 @Composable
 fun NaviDiary(context: Context,selectedFontColor: Color,selectedAccentColor:Color,selectedFontFamily: FontFamily,choosenState: CurrentState,choosenStateFunc: () -> Unit){
    TextButton(
-        onClick = { choosenStateFunc() },
+        onClick = { choosenStateFunc()
+
+        },
        Modifier
            .border(
                2.dp,
@@ -271,4 +295,6 @@ fun NaviDiary(context: Context,selectedFontColor: Color,selectedAccentColor:Colo
         )
     }
 }
+
+
 
